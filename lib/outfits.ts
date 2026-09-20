@@ -51,6 +51,22 @@ export async function fetchTodayOutfits(userId: string): Promise<Outfit[]> {
   return (data as Outfit[]) ?? [];
 }
 
+/** Persists a hand-built outfit the user chose to wear (algo memory). */
+export async function saveWornOutfit(input: {
+  userId: string;
+  clothesIds: string[];
+  weatherContext: string | null;
+  liked: boolean;
+}): Promise<void> {
+  const { error } = await supabase.from('outfits').insert({
+    user_id: input.userId,
+    clothes_ids: input.clothesIds,
+    weather_context: input.weatherContext,
+    liked: input.liked,
+  });
+  if (error) throw error;
+}
+
 export async function setOutfitLiked(id: string, liked: boolean): Promise<void> {
   const { error } = await supabase.from('outfits').update({ liked }).eq('id', id);
   if (error) throw error;

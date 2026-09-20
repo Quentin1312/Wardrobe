@@ -36,6 +36,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="outfit"
+        options={{
+          title: t('tabs.outfit'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="body-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="wardrobe"
         options={{
           title: t('tabs.wardrobe'),

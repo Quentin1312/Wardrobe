@@ -46,8 +46,19 @@ const en: Dict = {
   'onboarding.uploadFailedMsg': 'Could not save your photo.',
 
   'tabs.today': 'Today',
+  'tabs.outfit': 'Outfit',
   'tabs.wardrobe': 'Wardrobe',
   'tabs.profile': 'Profile',
+
+  'outfitDay.title': 'My outfit',
+  'outfitDay.subtitle': 'Swap any piece, then wear it.',
+  'outfitDay.validate': 'Wear it',
+  'outfitDay.skip': 'Shuffle',
+  'outfitDay.validated': 'Outfit saved for today',
+  'outfitDay.needMoreTitle': 'Not enough clothes',
+  'outfitDay.needMoreBody': 'Add at least a top, a bottom and shoes to build outfits.',
+  'outfitDay.none': 'None',
+  'outfitDay.jacketOptional': 'Jacket (optional)',
 
   'today.greetingMorning': 'Good morning',
   'today.greetingAfternoon': 'Good afternoon',
@@ -146,8 +157,19 @@ const fr: Dict = {
   'onboarding.uploadFailedMsg': 'Impossible d’enregistrer ta photo.',
 
   'tabs.today': 'Aujourd’hui',
+  'tabs.outfit': 'Tenue',
   'tabs.wardrobe': 'Garde-robe',
   'tabs.profile': 'Profil',
+
+  'outfitDay.title': 'Mon outfit',
+  'outfitDay.subtitle': 'Change chaque pièce, puis valide.',
+  'outfitDay.validate': 'Je la porte',
+  'outfitDay.skip': 'Mélanger',
+  'outfitDay.validated': 'Tenue enregistrée pour aujourd’hui',
+  'outfitDay.needMoreTitle': 'Pas assez de vêtements',
+  'outfitDay.needMoreBody': 'Ajoute au moins un haut, un bas et des chaussures pour composer des tenues.',
+  'outfitDay.none': 'Aucune',
+  'outfitDay.jacketOptional': 'Veste (optionnel)',
 
   'today.greetingMorning': 'Bonjour',
   'today.greetingAfternoon': 'Bon après-midi',
