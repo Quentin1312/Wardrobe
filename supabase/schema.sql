@@ -110,6 +110,15 @@ insert into storage.buckets (id, name, public)
 values ('profiles', 'profiles', true), ('clothes', 'clothes', true)
 on conflict (id) do nothing;
 
+-- Try-on results contain personal photos: keep this bucket private and use
+-- short-lived signed URLs when displaying a generated result.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('tryon', 'tryon', false, 10485760, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 -- Storage policies: users read/write only within their own <user_id>/ folder.
 do $$
 declare b text;
@@ -139,3 +148,29 @@ begin
            bucket_id = %1$L and (storage.foldername(name))[1] = auth.uid()::text)', b);
   end loop;
 end $$;
+
+drop policy if exists "tryon_select_own" on storage.objects;
+create policy "tryon_select_own" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'tryon'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "tryon_insert_own" on storage.objects;
+create policy "tryon_insert_own" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'tryon'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "tryon_delete_own" on storage.objects;
+create policy "tryon_delete_own" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'tryon'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+grant select, insert on table public.tryon_results to authenticated;

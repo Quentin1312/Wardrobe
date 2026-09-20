@@ -44,22 +44,23 @@ export default function SignUp() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
+      <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', alignItems: 'flex-end', paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
         <LanguageSwitch />
       </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={{ flex: 1, padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
+        <View style={{ flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center', padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
           <View style={{ gap: spacing.xs }}>
+            <Text style={[typography.eyebrow, { color: colors.accent }]}>BUILD YOUR DIGITAL CLOSET</Text>
             <Text style={[typography.h1, { color: colors.text }]}>{t('auth.signUpTitle')}</Text>
             <Text style={[typography.body, { color: colors.textMuted }]}>
               {t('auth.signUpSubtitle')}
             </Text>
           </View>
 
-          <View style={{ gap: spacing.md }}>
+          <View style={{ gap: spacing.md, padding: spacing.lg, borderRadius: 30, backgroundColor: colors.surface }}>
             <Field
               label={t('common.email')}
               value={email}

@@ -1,59 +1,59 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
-import { categoryKey } from '@/constants/categories';
+import { OutfitStudio } from '@/components/OutfitStudio';
+import { TryOnSheet } from '@/components/TryOnSheet';
 import { radius, shadows, spacing, typography } from '@/constants/theme';
-import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
 import { fetchClothes } from '@/lib/clothes';
 import { saveWornOutfit } from '@/lib/outfits';
-import { weatherContext } from '@/lib/weather';
+import { generateTryOn } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
+import { weatherContext } from '@/lib/weather';
 
-// Slots shown top-to-bottom like a figure. Jacket is optional.
 const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
+const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket'];
 
 type Buckets = Record<ClothingCategory, Clothing[]>;
+type Indices = Record<ClothingCategory, number>;
 
 function emptyBuckets(): Buckets {
   return { top: [], bottom: [], shoes: [], jacket: [], accessory: [] };
 }
 
+const INITIAL_INDICES: Indices = { top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: 0 };
+
 export default function OutfitDay() {
   const { colors, dark } = useTheme();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { t } = useLocale();
   const { state } = useWeather();
   const weather = state.status === 'ready' ? state.weather : null;
 
   const [buckets, setBuckets] = useState<Buckets>(emptyBuckets());
   const [loading, setLoading] = useState(true);
-  const [idx, setIdx] = useState<Record<ClothingCategory, number>>({
-    top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: 0,
-  });
+  const [idx, setIdx] = useState<Indices>(INITIAL_INDICES);
   const [saved, setSaved] = useState(false);
+  const [savedOutfitId, setSavedOutfitId] = useState<string | null>(null);
+  const [tryOnOpen, setTryOnOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
+    setLoading(true);
     try {
       const items = await fetchClothes(session.user.id);
-      const b = emptyBuckets();
-      for (const it of items) if (it.category) b[it.category].push(it);
-      setBuckets(b);
-      // Jacket starts on "none" (-1) if available, else -1.
-      setIdx({ top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: 0 });
+      const next = emptyBuckets();
+      for (const item of items) if (item.category) next[item.category].push(item);
+      setBuckets(next);
+      setIdx(INITIAL_INDICES);
+      setSaved(false);
+      setSavedOutfitId(null);
     } finally {
       setLoading(false);
     }
@@ -61,81 +61,95 @@ export default function OutfitDay() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const hasRequired = REQUIRED.every((c) => buckets[c].length > 0);
+  const hasRequired = REQUIRED.every((category) => buckets[category].length > 0);
 
-  function cycle(cat: ClothingCategory, dir: 1 | -1) {
+  const current = useCallback((category: ClothingCategory): Clothing | null => {
+    if (category === 'jacket' && idx.jacket < 0) return null;
+    return buckets[category][idx[category]] ?? null;
+  }, [buckets, idx]);
+
+  const selectedIds = useCallback(() => [
+    current('jacket')?.id,
+    current('top')?.id,
+    current('bottom')?.id,
+    current('shoes')?.id,
+  ].filter((id): id is string => Boolean(id)), [current]);
+
+  function resetSavedState() {
     setSaved(false);
-    setIdx((prev) => {
-      const list = buckets[cat];
-      if (list.length === 0) return prev;
-      const optional = cat === 'jacket';
-      // Optional slot cycles through -1 (none) .. length-1
-      const min = optional ? -1 : 0;
-      const span = list.length - min; // number of states
-      let next = prev[cat] + dir;
-      if (next < min) next = min + ((next - min) % span + span) % span;
-      next = ((next - min) % span + span) % span + min;
-      return { ...prev, [cat]: next };
+    setSavedOutfitId(null);
+  }
+
+  function cycle(category: ClothingCategory, direction: 1 | -1) {
+    resetSavedState();
+    setIdx((previous) => {
+      const list = buckets[category];
+      if (list.length === 0) return previous;
+      const minimum = category === 'jacket' ? -1 : 0;
+      const stateCount = list.length - minimum;
+      const offset = previous[category] - minimum;
+      const next = ((offset + direction) % stateCount + stateCount) % stateCount + minimum;
+      return { ...previous, [category]: next };
     });
   }
 
   function shuffle() {
-    setSaved(false);
-    setIdx((prev) => {
-      const pick = (cat: ClothingCategory, optional = false) => {
-        const n = buckets[cat].length;
-        if (n === 0) return optional ? -1 : 0;
-        return Math.floor(Math.random() * n);
-      };
-      return {
-        ...prev,
-        top: pick('top'),
-        bottom: pick('bottom'),
-        shoes: pick('shoes'),
-        jacket: buckets.jacket.length ? pick('jacket') : -1,
-      };
+    resetSavedState();
+    const pick = (category: ClothingCategory, optional = false) => {
+      const count = buckets[category].length;
+      if (count === 0) return optional ? -1 : 0;
+      if (optional && Math.random() < 0.25) return -1;
+      return Math.floor(Math.random() * count);
+    };
+    setIdx((previous) => ({
+      ...previous,
+      top: pick('top'),
+      bottom: pick('bottom'),
+      shoes: pick('shoes'),
+      jacket: pick('jacket', true),
+    }));
+  }
+
+  async function persistCurrentOutfit() {
+    if (!session?.user) throw new Error(t('common.error'));
+    if (savedOutfitId) return savedOutfitId;
+    const outfit = await saveWornOutfit({
+      userId: session.user.id,
+      clothesIds: selectedIds(),
+      weatherContext: weather ? weatherContext(weather) : null,
+      liked: true,
     });
+    setSavedOutfitId(outfit.id);
+    return outfit.id;
   }
 
   async function validate() {
-    if (!session?.user) return;
-    const ids = [
-      idx.jacket >= 0 ? buckets.jacket[idx.jacket]?.id : null,
-      buckets.top[idx.top]?.id,
-      buckets.bottom[idx.bottom]?.id,
-      buckets.shoes[idx.shoes]?.id,
-    ].filter((x): x is string => !!x);
-    if (ids.length < 2) return;
+    await persistCurrentOutfit();
     setSaved(true);
-    try {
-      await saveWornOutfit({
-        userId: session.user.id,
-        clothesIds: ids,
-        weatherContext: weather ? weatherContext(weather) : null,
-        liked: true,
-      });
-    } catch {
-      // keep the celebratory state; sync can be retried later
-    }
   }
 
-  const current = (cat: ClothingCategory): Clothing | null => {
-    if (cat === 'jacket' && idx.jacket < 0) return null;
-    return buckets[cat][idx[cat]] ?? null;
+  async function runTryOn() {
+    const outfitId = await persistCurrentOutfit();
+    const result = await generateTryOn(outfitId);
+    if (!result.url) throw new Error(result.error ?? t('tryon.error'));
+    return result.url;
+  }
+
+  const counts = {
+    top: buckets.top.length,
+    bottom: buckets.bottom.length,
+    shoes: buckets.shoes.length,
+    jacket: buckets.jacket.length,
+    accessory: buckets.accessory.length,
   };
+  const tryOnCount = TRYON_CATEGORIES.filter((category) => current(category)).length;
+  const profilePhoto = profile?.profile_photo_clean_url ?? profile?.profile_photo_url ?? null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
-        <Text style={[typography.h1, { color: colors.text }]}>{t('outfitDay.title')}</Text>
-        <Text style={[typography.small, { color: colors.textMuted }]}>
-          {weather ? `${weather.temp}° · ${weather.condition}` : t('outfitDay.subtitle')}
-        </Text>
-      </View>
-
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.accent} />
         </View>
       ) : !hasRequired ? (
         <EmptyState
@@ -144,173 +158,115 @@ export default function OutfitDay() {
           subtitle={t('outfitDay.needMoreBody')}
         />
       ) : (
-        <>
-          <ScrollView
-            contentContainerStyle={{ paddingHorizontal: spacing.screen, paddingVertical: spacing.md, gap: spacing.sm, alignItems: 'center' }}
-          >
-            {buckets.jacket.length > 0 ? (
-              <Slot
-                item={current('jacket')}
-                label={idx.jacket < 0 ? t('outfitDay.none') : t('category.jacket')}
-                onPrev={() => cycle('jacket', -1)}
-                onNext={() => cycle('jacket', 1)}
-              />
-            ) : null}
-            <Slot item={current('top')} label={t('category.top')} onPrev={() => cycle('top', -1)} onNext={() => cycle('top', 1)} single={buckets.top.length < 2} />
-            <Slot item={current('bottom')} label={t('category.bottom')} onPrev={() => cycle('bottom', -1)} onNext={() => cycle('bottom', 1)} single={buckets.bottom.length < 2} />
-            <Slot item={current('shoes')} label={t('category.shoes')} onPrev={() => cycle('shoes', -1)} onNext={() => cycle('shoes', 1)} single={buckets.shoes.length < 2} shoes />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            width: '100%',
+            maxWidth: 760,
+            alignSelf: 'center',
+            paddingHorizontal: spacing.screen,
+            paddingTop: spacing.sm,
+            paddingBottom: 128,
+            gap: spacing.lg,
+          }}
+        >
+          <View style={{ gap: 7 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[typography.eyebrow, { color: colors.accent }]}>FITTING ROOM / 01</Text>
+              {weather ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name={weather.icon} size={17} color={colors.textMuted} />
+                  <Text style={[typography.caption, { color: colors.textMuted }]}>
+                    {weather.temp}° · {weather.condition}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={[typography.h1, { color: colors.text }]}>{t('outfitDay.title')}</Text>
+            <Text style={[typography.body, { color: colors.textMuted }]}>{t('outfitDay.subtitle')}</Text>
+          </View>
 
-            {saved ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm }}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={[typography.bodyStrong, { color: colors.success }]}>
-                  {t('outfitDay.validated')}
-                </Text>
-              </View>
-            ) : null}
-          </ScrollView>
+          <OutfitStudio
+            current={current}
+            counts={counts}
+            onPrevious={(category) => cycle(category, -1)}
+            onNext={(category) => cycle(category, 1)}
+          />
 
-          {/* Actions */}
-          <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.screen }}>
+          {saved ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Ionicons name="checkmark-circle" size={21} color={colors.success} />
+              <Text style={[typography.bodyStrong, { color: colors.success }]}>{t('outfitDay.validated')}</Text>
+            </View>
+          ) : null}
+
+          <View style={{ gap: spacing.sm }}>
             <Pressable
-              onPress={shuffle}
+              onPress={() => setTryOnOpen(true)}
               style={({ pressed }) => ({
-                flex: 1,
-                flexDirection: 'row',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: spacing.xs,
-                paddingVertical: 16,
-                borderRadius: radius.full,
-                borderWidth: 1,
-                borderColor: colors.borderStrong,
-                backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
-              })}
-            >
-              <Ionicons name="shuffle" size={18} color={colors.text} />
-              <Text style={[typography.button, { color: colors.text }]}>{t('outfitDay.skip')}</Text>
-            </Pressable>
-            <Pressable
-              onPress={validate}
-              style={({ pressed }) => ({
-                flex: 1.4,
-                flexDirection: 'row',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: spacing.xs,
-                paddingVertical: 16,
+                minHeight: 60,
                 borderRadius: radius.full,
                 backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: spacing.lg,
                 ...shadows.floating(dark),
               })}
             >
-              <Ionicons name="checkmark" size={20} color={colors.primaryText} />
-              <Text style={[typography.button, { color: colors.primaryText }]}>
-                {t('outfitDay.validate')}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Ionicons name="sparkles" size={20} color={colors.energy} />
+                <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.cta')}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={colors.primaryText} />
             </Pressable>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Pressable
+                onPress={shuffle}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  minHeight: 52,
+                  borderRadius: radius.full,
+                  borderWidth: 1,
+                  borderColor: colors.borderStrong,
+                  backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: spacing.xs,
+                })}
+              >
+                <Ionicons name="shuffle" size={18} color={colors.text} />
+                <Text style={[typography.button, { color: colors.text }]}>{t('outfitDay.skip')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={validate}
+                style={({ pressed }) => ({
+                  flex: 1.25,
+                  minHeight: 52,
+                  borderRadius: radius.full,
+                  backgroundColor: pressed ? colors.accentSoft : colors.accent,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: spacing.xs,
+                })}
+              >
+                <Ionicons name="checkmark" size={19} color={colors.accentText} />
+                <Text style={[typography.button, { color: colors.accentText }]}>{t('outfitDay.validate')}</Text>
+              </Pressable>
+            </View>
           </View>
-        </>
+        </ScrollView>
       )}
+
+      <TryOnSheet
+        visible={tryOnOpen}
+        modelPhoto={profilePhoto}
+        garmentCount={tryOnCount}
+        onClose={() => setTryOnOpen(false)}
+        onGenerate={runTryOn}
+      />
     </SafeAreaView>
-  );
-}
-
-function Slot({
-  item,
-  label,
-  onPrev,
-  onNext,
-  single,
-  shoes,
-}: {
-  item: Clothing | null;
-  label: string;
-  onPrev: () => void;
-  onNext: () => void;
-  single?: boolean;
-  shoes?: boolean;
-}) {
-  const { colors } = useTheme();
-  const fade = useRef(new Animated.Value(1)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-
-  // Animate on item change.
-  useEffect(() => {
-    fade.setValue(0.35);
-    scale.setValue(0.96);
-    Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 7, useNativeDriver: true }),
-    ]).start();
-  }, [item?.id]);
-
-  const size = shoes ? 120 : 150;
-
-  return (
-    <View style={{ alignItems: 'center', gap: 4 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Arrow icon="chevron-back" onPress={onPrev} disabled={single} />
-        <Animated.View
-          style={{
-            width: size + 60,
-            height: size,
-            borderRadius: radius.lg,
-            backgroundColor: '#FFFFFF',
-            borderWidth: 1,
-            borderColor: colors.border,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            opacity: fade,
-            transform: [{ scale }],
-          }}
-        >
-          {item ? (
-            <Animated.Image
-              source={{ uri: item.photo_clean_url ?? item.photo_url }}
-              style={{ width: '100%', height: '100%', padding: spacing.sm }}
-              resizeMode="contain"
-            />
-          ) : (
-            <Ionicons name="remove-outline" size={28} color={colors.textMuted} />
-          )}
-        </Animated.View>
-        <Arrow icon="chevron-forward" onPress={onNext} disabled={single} />
-      </View>
-      <Text style={[typography.caption, { color: colors.textMuted }]}>{label}</Text>
-    </View>
-  );
-}
-
-function Arrow({
-  icon,
-  onPress,
-  disabled,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      hitSlop={8}
-      style={({ pressed }) => ({
-        width: 40,
-        height: 40,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: disabled ? 0.3 : 1,
-      })}
-    >
-      <Ionicons name={icon} size={20} color={colors.text} />
-    </Pressable>
   );
 }

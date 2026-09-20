@@ -36,20 +36,21 @@ export default function SignIn() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
+      <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', alignItems: 'flex-end', paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
         <LanguageSwitch />
       </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={{ flex: 1, padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
+        <View style={{ flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center', padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
           <View style={{ gap: spacing.xs }}>
+            <Text style={[typography.eyebrow, { color: colors.accent }]}>PERSONAL STYLE OS</Text>
             <Text style={[typography.h1, { color: colors.text }]}>{t('auth.signInTitle')}</Text>
             <Text style={[typography.body, { color: colors.textMuted }]}>{t('brand.tagline')}</Text>
           </View>
 
-          <View style={{ gap: spacing.md }}>
+          <View style={{ gap: spacing.md, padding: spacing.lg, borderRadius: 30, backgroundColor: colors.surface }}>
             <Field
               label={t('common.email')}
               value={email}

@@ -1,5 +1,4 @@
-// constants/theme.ts — Wardrobe · direction « Éditorial · Tactile · Chaleureux »
-// Mêmes clés qu'avant (colors, spacing, radius) + nouvelles clés et exports.
+// Wardrobe · direction « Digital fitting room · Mode · Jeune »
 //
 // Polices :
 //   npx expo install expo-font @expo-google-fonts/instrument-serif @expo-google-fonts/instrument-sans
@@ -10,56 +9,62 @@
 import { TextStyle, ViewStyle } from 'react-native';
 
 export const lightColors = {
-  // --- clés existantes ---
-  bg: '#F5EFE4',
-  surface: '#FFFBF3',
-  border: '#E0D4C0',
-  text: '#241A14',
-  textMuted: '#6B5E51',
-  primary: '#2C3A2E',
-  primaryText: '#F8F3E8',
-  accent: '#B04824',
-  danger: '#B3362B',
-  success: '#2A7453',
+  bg: '#F2F2EE',
+  surface: '#FFFFFF',
+  border: '#DFDFD9',
+  text: '#101011',
+  textMuted: '#6D6D68',
+  primary: '#111113',
+  primaryText: '#F9F9F5',
+  accent: '#635BFF',
+  danger: '#DC3F52',
+  success: '#16805A',
 
-  // --- nouvelles clés ---
-  surfaceAlt: '#ECE3D3', // fond enfoncé : vignettes, état pressé, segments
-  borderStrong: '#CDBFA6', // bouton ghost, repères
-  primaryPressed: '#1F2A21',
-  accentText: '#FFF8F0', // texte sur accent
-  accentSoft: '#F3DACB', // pastille « Léger · 25° »
-  hero: '#2C3A2E', // carte météo
-  heroText: '#F8F3E8',
-  heroMuted: '#B9C2AF',
-  heroAccent: '#F0B27A', // soleil du glyphe météo
-  onPrimaryAccent: '#F0B27A', // cœur du bouton J'aime
-  overlay: 'rgba(36,26,20,0.48)', // voile derrière les feuilles modales
+  surfaceAlt: '#E8E8E2',
+  borderStrong: '#B9B9B1',
+  primaryPressed: '#2B2B2F',
+  accentText: '#FFFFFF',
+  accentSoft: '#E7E5FF',
+  hero: '#151517',
+  heroText: '#F9F9F5',
+  heroMuted: '#A8A8A3',
+  heroAccent: '#C9FF3F',
+  onPrimaryAccent: '#C9FF3F',
+  energy: '#C9FF3F',
+  energyText: '#111113',
+  chrome: '#151517',
+  chromeMuted: '#989899',
+  overlay: 'rgba(10,10,12,0.62)',
 };
 
 export type Colors = typeof lightColors;
 
 export const darkColors: Colors = {
-  bg: '#14110D',
-  surface: '#1E1914',
-  border: '#382F25',
-  text: '#F3EBDD',
-  textMuted: '#A99C8B',
-  primary: '#D9E1C7',
-  primaryText: '#172016',
-  accent: '#E58A63',
-  danger: '#F0766A',
-  success: '#78C79A',
+  bg: '#0B0B0C',
+  surface: '#171719',
+  border: '#303034',
+  text: '#F5F5F0',
+  textMuted: '#9C9C98',
+  primary: '#F5F5F0',
+  primaryText: '#101011',
+  accent: '#7B74FF',
+  danger: '#FF6A78',
+  success: '#5EE0A9',
 
-  surfaceAlt: '#29231C',
-  borderStrong: '#54483A',
-  primaryPressed: '#C3CEAF',
-  accentText: '#1F110A',
-  accentSoft: '#3A231A',
-  hero: '#253128',
-  heroText: '#F3EBDD',
-  heroMuted: '#A9B6A2',
-  heroAccent: '#F0B27A',
-  onPrimaryAccent: '#A8421F',
+  surfaceAlt: '#232326',
+  borderStrong: '#4A4A50',
+  primaryPressed: '#DADAD4',
+  accentText: '#FFFFFF',
+  accentSoft: '#292653',
+  hero: '#171719',
+  heroText: '#F5F5F0',
+  heroMuted: '#A3A3A0',
+  heroAccent: '#C9FF3F',
+  onPrimaryAccent: '#6E63FF',
+  energy: '#C9FF3F',
+  energyText: '#101011',
+  chrome: '#151517',
+  chromeMuted: '#8D8D92',
   overlay: 'rgba(0,0,0,0.62)',
 };
 
@@ -77,10 +82,10 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 12,
-  md: 16, // champs, vignettes
-  lg: 24, // cartes, photos
-  xl: 32, // carte météo, feuille modale, cadre photo
+  sm: 10,
+  md: 16,
+  lg: 22,
+  xl: 30,
   full: 999, // boutons, chips, tab bar
 };
 
@@ -97,16 +102,16 @@ export const fonts = {
 
 // Une famille = un poids dans RN : pas de fontWeight.
 export const typography = {
-  display: { fontFamily: fonts.serif, fontSize: 80, lineHeight: 70, letterSpacing: -2.4 }, // température
-  h1: { fontFamily: fonts.serif, fontSize: 44, lineHeight: 46, letterSpacing: -0.9 }, // titre d'écran
-  h2: { fontFamily: fonts.serif, fontSize: 30, lineHeight: 34, letterSpacing: -0.5 }, // section, feuille (32/36)
+  display: { fontFamily: fonts.sansBold, fontSize: 72, lineHeight: 70, letterSpacing: -3.2 },
+  h1: { fontFamily: fonts.sansBold, fontSize: 40, lineHeight: 42, letterSpacing: -1.8 },
+  h2: { fontFamily: fonts.sansSemi, fontSize: 28, lineHeight: 32, letterSpacing: -0.8 },
   h3: { fontFamily: fonts.sansSemi, fontSize: 18, lineHeight: 24 },
   body: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 24 },
   bodyStrong: { fontFamily: fonts.sansSemi, fontSize: 16, lineHeight: 24 },
   small: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 },
   button: { fontFamily: fonts.sansSemi, fontSize: 16, lineHeight: 20, letterSpacing: 0.1 },
   caption: { fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 16, letterSpacing: 0.2 },
-  eyebrow: { fontFamily: fonts.sansSemi, fontSize: 11, lineHeight: 14, letterSpacing: 1.4, textTransform: 'uppercase' },
+  eyebrow: { fontFamily: fonts.sansBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.8, textTransform: 'uppercase' },
 } satisfies Record<string, TextStyle>;
 
 export const shadows = {

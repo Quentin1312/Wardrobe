@@ -13,11 +13,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '', {
+// Keep public screens renderable in development even before .env is copied.
+// Auth/data calls will still fail clearly until real values are provided.
+export const supabase = createClient(
+  supabaseUrl ?? 'https://missing-config.supabase.co',
+  supabaseAnonKey ?? 'missing-config',
+  {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
-});
+  }
+);

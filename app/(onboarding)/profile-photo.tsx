@@ -45,8 +45,9 @@ export default function ProfilePhoto() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: spacing.screen, gap: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ width: '100%', maxWidth: 560, alignSelf: 'center', padding: spacing.screen, gap: spacing.lg }}>
         <View style={{ gap: spacing.xs, marginTop: spacing.md }}>
+          <Text style={[typography.eyebrow, { color: colors.accent }]}>CREATE YOUR DIGITAL TWIN</Text>
           <Text style={[typography.h1, { color: colors.text }]}>{t('onboarding.photoTitle')}</Text>
           <Text style={[typography.body, { color: colors.textMuted }]}>
             {t('onboarding.photoSubtitle')}
@@ -68,8 +69,6 @@ export default function ProfilePhoto() {
               height: 280,
               borderRadius: radius.xl,
               backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.border,
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',

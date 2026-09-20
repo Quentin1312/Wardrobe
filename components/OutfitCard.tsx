@@ -28,39 +28,44 @@ export function OutfitCard({
     <View
       style={{
         backgroundColor: colors.surface,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: colors.border,
+        borderRadius: radius.xl,
         overflow: 'hidden',
       }}
     >
-      <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md }}>
+      <View style={{ flexDirection: 'row', gap: 2, minHeight: 190, backgroundColor: colors.surfaceAlt }}>
         {items.map((c) => (
-          <View key={c.id} style={{ flex: 1, gap: spacing.xs }}>
+          <View key={c.id} style={{ flex: 1, minWidth: 0 }}>
             <Image
               source={{ uri: c.photo_clean_url ?? c.photo_url }}
               style={{
                 width: '100%',
-                aspectRatio: 1,
-                borderRadius: radius.md,
-                backgroundColor: colors.surfaceAlt,
+                height: 190,
+                backgroundColor: '#F7F7F4',
               }}
-              resizeMode="cover"
+              resizeMode="contain"
             />
-            <Text style={[typography.caption, { color: colors.textMuted, textAlign: 'center' }]}>
-              {t(categoryKey(c.category))}
-            </Text>
           </View>
         ))}
       </View>
 
-      {outfit.rationale ? (
-        <Text style={[typography.small, { paddingHorizontal: spacing.md, color: colors.textMuted }]}>
-          {outfit.rationale}
-        </Text>
-      ) : null}
+      <View style={{ padding: spacing.md, gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+            {items.map((item) => (
+              <View key={item.id} style={{ borderRadius: radius.full, backgroundColor: colors.surfaceAlt, paddingVertical: 5, paddingHorizontal: 9 }}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>{t(categoryKey(item.category))}</Text>
+              </View>
+            ))}
+          </View>
+          <Ionicons name="sparkles" size={18} color={colors.accent} />
+        </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md }}>
+        {outfit.rationale ? (
+          <Text style={[typography.body, { color: colors.text }]}>{outfit.rationale}</Text>
+        ) : null}
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
         <Pressable
           onPress={onSkip}
           style={({ pressed }) => ({
@@ -71,9 +76,7 @@ export function OutfitCard({
             gap: spacing.xs,
             paddingVertical: 14,
             borderRadius: radius.full,
-            borderWidth: 1,
-            borderColor: colors.borderStrong,
-            backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+            backgroundColor: pressed ? colors.surfaceAlt : colors.bg,
           })}
         >
           <Ionicons name="close" size={18} color={colors.textMuted} />

@@ -17,7 +17,8 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ flex: 1, padding: spacing.screen, gap: spacing.lg }}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', padding: spacing.screen, paddingBottom: 110, gap: spacing.lg }}>
+        <Text style={[typography.eyebrow, { color: colors.accent }]}>ACCOUNT / SETTINGS</Text>
         <Text style={[typography.h1, { color: colors.text }]}>{t('profile.title')}</Text>
 
         <View style={{ alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
@@ -27,8 +28,6 @@ export default function Profile() {
               height: 120,
               borderRadius: radius.full,
               backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.border,
               overflow: 'hidden',
               alignItems: 'center',
               justifyContent: 'center',
@@ -73,8 +72,6 @@ function SettingRow({ label, children }: { label: string; children: ReactNode })
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.md,
         borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: colors.border,
         backgroundColor: colors.surface,
       }}
     >

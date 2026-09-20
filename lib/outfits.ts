@@ -57,14 +57,19 @@ export async function saveWornOutfit(input: {
   clothesIds: string[];
   weatherContext: string | null;
   liked: boolean;
-}): Promise<void> {
-  const { error } = await supabase.from('outfits').insert({
-    user_id: input.userId,
-    clothes_ids: input.clothesIds,
-    weather_context: input.weatherContext,
-    liked: input.liked,
-  });
+}): Promise<Outfit> {
+  const { data, error } = await supabase
+    .from('outfits')
+    .insert({
+      user_id: input.userId,
+      clothes_ids: input.clothesIds,
+      weather_context: input.weatherContext,
+      liked: input.liked,
+    })
+    .select()
+    .single();
   if (error) throw error;
+  return data as Outfit;
 }
 
 export async function setOutfitLiked(id: string, liked: boolean): Promise<void> {

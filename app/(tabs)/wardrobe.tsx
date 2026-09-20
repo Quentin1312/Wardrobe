@@ -74,7 +74,8 @@ export default function Wardrobe() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
+      <View style={{ width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: spacing.screen, paddingTop: spacing.sm, gap: 4 }}>
+        <Text style={[typography.eyebrow, { color: colors.accent }]}>YOUR ARCHIVE / {String(items.length).padStart(2, '0')}</Text>
         <Text style={[typography.h1, { color: colors.text }]}>{t('wardrobe.title')}</Text>
         <Text style={[typography.small, { color: colors.textMuted }]}>
           {items.length > 0 ? t('wardrobe.count', { count: items.length }) : t('wardrobe.subtitle')}
@@ -115,7 +116,8 @@ export default function Wardrobe() {
           data={shown}
           keyExtractor={(i) => i.id}
           numColumns={2}
-          contentContainerStyle={{ padding: spacing.md, paddingBottom: 110 }}
+          style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}
+          contentContainerStyle={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm, paddingBottom: 128 }}
           columnWrapperStyle={{ gap: spacing.md }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           renderItem={({ item }) => <ClothingCard item={item} onLongPress={() => onDelete(item)} />}
@@ -127,17 +129,18 @@ export default function Wardrobe() {
         style={({ pressed }) => ({
           position: 'absolute',
           right: spacing.screen,
-          bottom: spacing.lg,
+          bottom: 98,
           width: 60,
           height: 60,
-          borderRadius: radius.full,
-          backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+          borderRadius: 22,
+          backgroundColor: pressed ? colors.heroAccent : colors.energy,
           alignItems: 'center',
           justifyContent: 'center',
+          transform: [{ rotate: pressed ? '4deg' : '-3deg' }],
           ...shadows.floating(dark),
         })}
       >
-        <Ionicons name="add" size={30} color={colors.primaryText} />
+        <Ionicons name="add" size={30} color={colors.energyText} />
       </Pressable>
     </SafeAreaView>
   );
@@ -152,8 +155,8 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
         paddingVertical: 8,
         paddingHorizontal: spacing.md,
         borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: active ? colors.primary : colors.border,
+        borderWidth: active ? 0 : 1,
+        borderColor: colors.border,
         backgroundColor: active ? colors.primary : colors.surface,
       }}
     >
@@ -176,16 +179,14 @@ function ClothingCard({ item, onLongPress }: { item: Clothing; onLongPress: () =
         flex: 1,
         backgroundColor: colors.surface,
         borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: colors.border,
         overflow: 'hidden',
       }}
     >
       {/* Light tile + contain so the full garment is visible (no cropping). */}
-      <View style={{ backgroundColor: '#FFFFFF', padding: spacing.sm }}>
+      <View style={{ backgroundColor: '#F7F7F4', padding: spacing.sm }}>
         <Image source={{ uri }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="contain" />
       </View>
-      <View style={{ padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <View style={{ paddingHorizontal: spacing.sm, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         {item.dominant_color ? (
           <View
             style={{

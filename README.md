@@ -1,10 +1,10 @@
 # Wardrobe
 
-Personal styling assistant. Photograph your clothes, get daily outfit suggestions,
-and (optionally) see them on your own photo via virtual try-on.
+Personal styling assistant. Photograph your clothes, build daily looks in the
+interactive fitting room, and render a photorealistic AI try-on on your photo.
 
-This repo is the **clean base**: Expo + TypeScript + expo-router, Supabase auth &
-storage, onboarding with photo capture, and empty tab screens. No AI logic yet.
+The app uses Expo + TypeScript + expo-router, Supabase auth/database/storage,
+Groq outfit suggestions, and a server-side FASHN virtual try-on pipeline.
 
 ## Stack
 
@@ -46,6 +46,27 @@ storage, onboarding with photo capture, and empty tab screens. No AI logic yet.
 
    Then scan the QR with Expo Go, or press `a` / `i` for an emulator.
 
+## AI virtual try-on
+
+The try-on flow runs in `supabase/functions/generate-tryon`; the FASHN key is
+never shipped to the app.
+
+1. Apply `supabase/migrations/20260920175222_add_private_tryon_storage.sql`.
+2. Configure the provider secret:
+
+   ```bash
+   supabase secrets set FASHN_API_KEY=your_key
+   ```
+
+3. Deploy the function:
+
+   ```bash
+   supabase functions deploy generate-tryon
+   ```
+
+Generated images are copied from the provider to the private `tryon` bucket;
+the client only receives a short-lived signed URL.
+
 ## Structure
 
 ```
@@ -73,8 +94,8 @@ supabase/schema.sql    Full schema + RLS + storage
 
 Redirects are centralized in `app/_layout.tsx`.
 
-## Next (not built yet)
+## Next
 
-SAM background removal · Fashion-CLIP categorization · weather · Claude outfit
-suggestions · GPT-Image try-on. The schema and types already account for these.
+Automatic background removal · richer clothing metadata · native GLB avatar
+prototype · try-on history · laundry state.
 ```

@@ -14,6 +14,7 @@ const en: Dict = {
   'common.password': 'Password',
   'common.retry': 'Tap to retry',
   'common.cancel': 'Cancel',
+  'common.close': 'Close',
   'common.error': 'Error',
 
   'auth.signInTitle': 'Wardrobe',
@@ -50,8 +51,8 @@ const en: Dict = {
   'tabs.wardrobe': 'Wardrobe',
   'tabs.profile': 'Profile',
 
-  'outfitDay.title': 'My outfit',
-  'outfitDay.subtitle': 'Swap any piece, then wear it.',
+  'outfitDay.title': 'Today’s fit',
+  'outfitDay.subtitle': 'Build it, turn it, make it yours.',
   'outfitDay.validate': 'Wear it',
   'outfitDay.skip': 'Shuffle',
   'outfitDay.validated': 'Outfit saved for today',
@@ -59,6 +60,17 @@ const en: Dict = {
   'outfitDay.needMoreBody': 'Add at least a top, a bottom and shoes to build outfits.',
   'outfitDay.none': 'None',
   'outfitDay.jacketOptional': 'Jacket (optional)',
+
+  'tryon.cta': 'Try it on with AI',
+  'tryon.title': 'See it on you',
+  'tryon.pieces': '{count} compatible piece(s) will be applied.',
+  'tryon.privacy': 'With your consent, your profile photo and selected clothes are securely sent to our AI try-on partner. The final image is copied to your private space.',
+  'tryon.consent': 'I agree · Generate',
+  'tryon.generating': 'Your fitting is being rendered…',
+  'tryon.generatingHint': 'Usually 10 to 30 seconds. Keep this screen open.',
+  'tryon.ready': 'Your AI fitting is ready',
+  'tryon.needPhoto': 'Add a profile photo before using AI try-on.',
+  'tryon.error': 'The AI fitting could not be generated.',
 
   'today.greetingMorning': 'Good morning',
   'today.greetingAfternoon': 'Good afternoon',
@@ -125,6 +137,7 @@ const fr: Dict = {
   'common.password': 'Mot de passe',
   'common.retry': 'Toucher pour réessayer',
   'common.cancel': 'Annuler',
+  'common.close': 'Fermer',
   'common.error': 'Erreur',
 
   'auth.signInTitle': 'Wardrobe',
@@ -161,8 +174,8 @@ const fr: Dict = {
   'tabs.wardrobe': 'Garde-robe',
   'tabs.profile': 'Profil',
 
-  'outfitDay.title': 'Mon outfit',
-  'outfitDay.subtitle': 'Change chaque pièce, puis valide.',
+  'outfitDay.title': 'Le fit du jour',
+  'outfitDay.subtitle': 'Compose-le, tourne-le, fais-en le tien.',
   'outfitDay.validate': 'Je la porte',
   'outfitDay.skip': 'Mélanger',
   'outfitDay.validated': 'Tenue enregistrée pour aujourd’hui',
@@ -170,6 +183,17 @@ const fr: Dict = {
   'outfitDay.needMoreBody': 'Ajoute au moins un haut, un bas et des chaussures pour composer des tenues.',
   'outfitDay.none': 'Aucune',
   'outfitDay.jacketOptional': 'Veste (optionnel)',
+
+  'tryon.cta': 'Essayer sur moi avec l’IA',
+  'tryon.title': 'Vois la tenue sur toi',
+  'tryon.pieces': '{count} pièce(s) compatible(s) seront appliquées.',
+  'tryon.privacy': 'Avec ton accord, ta photo de profil et les vêtements choisis sont envoyés de façon sécurisée à notre partenaire d’essayage IA. Le résultat est ensuite copié dans ton espace privé.',
+  'tryon.consent': 'J’accepte · Générer',
+  'tryon.generating': 'Ton essayage est en cours…',
+  'tryon.generatingHint': 'Environ 10 à 30 secondes. Garde cet écran ouvert.',
+  'tryon.ready': 'Ton essayage IA est prêt',
+  'tryon.needPhoto': 'Ajoute une photo de profil avant de lancer l’essayage IA.',
+  'tryon.error': 'Impossible de générer l’essayage IA.',
 
   'today.greetingMorning': 'Bonjour',
   'today.greetingAfternoon': 'Bon après-midi',

@@ -67,13 +67,12 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
         style={[
           typography.body,
           {
-            borderWidth: 1,
-            borderColor: colors.border,
             borderRadius: radius.md,
             paddingHorizontal: spacing.md,
             paddingVertical: 14,
             color: colors.text,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.surfaceAlt,
+            minHeight: 52,
           },
         ]}
         {...props}

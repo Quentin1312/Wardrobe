@@ -12,8 +12,12 @@ export default function SelectLanguage() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ flex: 1, padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
-        <View style={{ gap: spacing.xs }}>
+      <View pointerEvents="none" style={{ position: 'absolute', width: 360, height: 360, borderRadius: 180, backgroundColor: colors.accent, opacity: 0.13, top: -140, right: -100 }} />
+      <View style={{ flex: 1, width: '100%', maxWidth: 540, alignSelf: 'center', padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
+        <View style={{ gap: spacing.sm }}>
+          <View style={{ alignSelf: 'flex-start', paddingVertical: 7, paddingHorizontal: 11, borderRadius: radius.full, backgroundColor: colors.energy }}>
+            <Text style={[typography.eyebrow, { color: colors.energyText }]}>YOUR STYLE STARTS HERE</Text>
+          </View>
           <Text style={[typography.h1, { color: colors.text }]}>Wardrobe</Text>
           <Text style={[typography.body, { color: colors.textMuted }]}>
             Choose your language · Choisis ta langue
@@ -31,8 +35,6 @@ export default function SelectLanguage() {
                 gap: spacing.md,
                 padding: spacing.lg,
                 borderRadius: radius.lg,
-                borderWidth: 1,
-                borderColor: colors.border,
                 backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
               })}
             >
@@ -42,8 +44,6 @@ export default function SelectLanguage() {
                   height: 44,
                   borderRadius: radius.full,
                   backgroundColor: colors.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: colors.border,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}

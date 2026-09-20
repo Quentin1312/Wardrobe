@@ -44,6 +44,9 @@ export default function AddItem() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <View
         style={{
+          width: '100%',
+          maxWidth: 620,
+          alignSelf: 'center',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -57,7 +60,7 @@ export default function AddItem() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.screen, gap: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ width: '100%', maxWidth: 620, alignSelf: 'center', padding: spacing.screen, gap: spacing.lg }}>
         <Pressable
           onPress={async () => {
             const a = await takePhoto();
@@ -67,8 +70,6 @@ export default function AddItem() {
             aspectRatio: 1,
             borderRadius: radius.xl,
             backgroundColor: colors.surfaceAlt,
-            borderWidth: 1,
-            borderColor: colors.border,
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',

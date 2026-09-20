@@ -50,7 +50,7 @@ function RootNavigator() {
     } else if (signedIn && !needsOnboarding && (route === '(auth)' || route === '(onboarding)')) {
       router.replace('/(tabs)');
     }
-  }, [loading, ready, chosen, session, profile, segments]);
+  }, [loading, ready, chosen, session, profile, segments, router]);
 
   if (loading || !ready) {
     return (

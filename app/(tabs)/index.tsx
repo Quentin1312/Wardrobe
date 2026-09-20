@@ -1,13 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutfitCard } from '@/components/OutfitCard';
 import { radius, spacing, typography } from '@/constants/theme';
@@ -106,14 +100,48 @@ export default function Today() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: spacing.screen, gap: spacing.lg, paddingBottom: 110 }}>
-        <View style={{ gap: 2 }}>
-          <Text style={[typography.eyebrow, { color: colors.textMuted }]}>
-            {todayLabel(locale)}
-          </Text>
-          <Text style={[typography.h1, { color: colors.text }]}>
-            {t(greetingKey())}{profile?.first_name ? ` ${profile.first_name}` : ''}
-          </Text>
+      <ScrollView
+        contentContainerStyle={{
+          width: '100%',
+          maxWidth: 760,
+          alignSelf: 'center',
+          padding: spacing.screen,
+          gap: spacing.lg,
+          paddingBottom: 128,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md }}>
+          <View style={{ gap: 4, flex: 1 }}>
+            <Text style={[typography.eyebrow, { color: colors.accent }]}>WARDROBE / TODAY</Text>
+            <Text style={[typography.h1, { color: colors.text }]}>
+              {t(greetingKey())}{profile?.first_name ? ` ${profile.first_name}` : ''}
+            </Text>
+            <Text style={[typography.small, { color: colors.textMuted, textTransform: 'capitalize' }]}>
+              {todayLabel(locale)}
+            </Text>
+          </View>
+          <View
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 20,
+              backgroundColor: colors.surfaceAlt,
+              overflow: 'hidden',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ rotate: '3deg' }],
+            }}
+          >
+            {profile?.profile_photo_clean_url || profile?.profile_photo_url ? (
+              <Image
+                source={{ uri: profile.profile_photo_clean_url ?? profile.profile_photo_url ?? '' }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="person" size={22} color={colors.textMuted} />
+            )}
+          </View>
         </View>
 
         {state.status === 'loading' ? (
@@ -144,7 +172,10 @@ export default function Today() {
 
         <View style={{ gap: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={[typography.h2, { color: colors.text }]}>{t('today.outfits')}</Text>
+            <View style={{ gap: 2 }}>
+              <Text style={[typography.eyebrow, { color: colors.textMuted }]}>AI STYLIST</Text>
+              <Text style={[typography.h2, { color: colors.text }]}>{t('today.outfits')}</Text>
+            </View>
             <Pressable
               onPress={onGenerate}
               disabled={generating}
@@ -210,7 +241,20 @@ function WeatherCard({ weather }: { weather: Weather }) {
   const { colors } = useTheme();
   const { t } = useLocale();
   return (
-    <View style={{ backgroundColor: colors.hero, borderRadius: radius.xl, padding: spacing.lg }}>
+    <View style={{ backgroundColor: colors.hero, borderRadius: radius.xl, padding: spacing.lg, overflow: 'hidden' }}>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: 170,
+          height: 170,
+          borderRadius: 85,
+          right: -52,
+          top: -62,
+          backgroundColor: colors.accent,
+          opacity: 0.35,
+        }}
+      />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         <Ionicons name="location-outline" size={16} color={colors.heroMuted} />
         <Text style={[typography.caption, { color: colors.heroMuted }]}>{weather.city}</Text>
@@ -230,7 +274,9 @@ function WeatherCard({ weather }: { weather: Weather }) {
             {weather.condition}
           </Text>
         </View>
-        <Ionicons name={weather.icon} size={76} color={colors.heroAccent} />
+        <View style={{ width: 82, height: 82, borderRadius: 28, backgroundColor: colors.heroAccent, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '6deg' }] }}>
+          <Ionicons name={weather.icon} size={48} color={colors.energyText} />
+        </View>
       </View>
 
       <View
