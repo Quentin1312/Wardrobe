@@ -35,6 +35,7 @@ export default function ItemSheet() {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [nameSaved, setNameSaved] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -55,6 +56,9 @@ export default function ItemSheet() {
     setItem({ ...item, name: value.trim() || null });
     try {
       await renameClothing(item.id, value);
+      // Visible confirmation — otherwise the tap feels like it did nothing.
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 1800);
     } catch (e: any) {
       setMsg(e?.message ?? null);
     }
@@ -219,14 +223,19 @@ export default function ItemSheet() {
             <Pressable
               onPress={onSaveName}
               style={{
-                paddingHorizontal: spacing.lg,
-                borderRadius: radius.md,
-                backgroundColor: colors.accent,
+                flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: 6,
+                paddingHorizontal: spacing.lg,
+                borderRadius: radius.md,
+                backgroundColor: nameSaved ? colors.success : colors.accent,
               }}
             >
-              <Text style={[typography.button, { color: colors.accentText }]}>{t('common.save')}</Text>
+              {nameSaved ? <Ionicons name="checkmark" size={17} color={colors.accentText} /> : null}
+              <Text style={[typography.button, { color: colors.accentText }]}>
+                {nameSaved ? t('common.saved') : t('common.save')}
+              </Text>
             </Pressable>
           </View>
         </View>

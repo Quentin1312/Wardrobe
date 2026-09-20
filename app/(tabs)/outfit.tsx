@@ -72,8 +72,8 @@ export default function OutfitDay() {
     return buckets[category][idx[category]] ?? null;
   }, [buckets, idx]);
 
+  // Jackets are excluded from the look for now.
   const selectedIds = useCallback(() => [
-    current('jacket')?.id,
     current('top')?.id,
     current('bottom')?.id,
     current('shoes')?.id,
@@ -110,7 +110,7 @@ export default function OutfitDay() {
       top: pick('top'),
       bottom: pick('bottom'),
       shoes: pick('shoes'),
-      jacket: pick('jacket', true),
+      jacket: -1,
     }));
   }
 
@@ -118,8 +118,9 @@ export default function OutfitDay() {
   function applyOutfitIds(ids: string[]) {
     setIdx((previous) => {
       const next: Indices = { ...previous, jacket: -1 };
+      const wearable: ClothingCategory[] = ['top', 'bottom', 'shoes'];
       for (const id of ids) {
-        for (const category of Object.keys(buckets) as ClothingCategory[]) {
+        for (const category of wearable) {
           const position = buckets[category].findIndex((piece) => piece.id === id);
           if (position >= 0) next[category] = position;
         }

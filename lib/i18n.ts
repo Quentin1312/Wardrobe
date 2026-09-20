@@ -113,6 +113,7 @@ const en: Dict = {
   'wardrobe.favorites': 'Favourites',
   'wardrobe.namePlaceholder': 'e.g. Black denim jacket',
   'common.save': 'Save',
+  'common.saved': 'Saved',
 
   'today.noOutfitTitle': 'No outfit found',
   'today.noOutfitBody': 'Could not build an outfit from your wardrobe. Add more variety and try again.',
@@ -267,6 +268,7 @@ const fr: Dict = {
   'wardrobe.favorites': 'Favoris',
   'wardrobe.namePlaceholder': 'ex. Veste en jean noire',
   'common.save': 'Enregistrer',
+  'common.saved': 'Enregistré',
 
   'today.noOutfitTitle': 'Aucune tenue trouvée',
   'today.noOutfitBody': 'Impossible de composer une tenue avec ta garde-robe. Ajoute plus de variété et réessaie.',

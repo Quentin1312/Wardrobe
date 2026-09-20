@@ -15,24 +15,24 @@ interface OutfitStudioProps {
   onNext: (category: ClothingCategory) => void;
 }
 
-// Worn order reads top-to-bottom; the jacket sits last as an extra layer
-// rather than floating above the head.
+// Jackets are intentionally left out for now — they read badly stacked.
 const ROWS: { category: ClothingCategory; height: number }[] = [
-  { category: 'top', height: 158 },
-  { category: 'bottom', height: 178 },
-  { category: 'shoes', height: 104 },
-  { category: 'jacket', height: 148 },
+  { category: 'top', height: 206 },
+  { category: 'bottom', height: 228 },
+  { category: 'shoes', height: 132 },
 ];
 
-// Soft studio gradient — neutral, never a flat white sheet.
-const STAGE_TOP = '#EDEBE5';
-const STAGE_BOTTOM = '#D6D3CB';
-const STAGE_LINE = 'rgba(21,21,23,0.08)';
-const INK_MUTED = '#7E7C76';
+// Mid-tone sand stage: both dark and light garments stay readable, and it
+// never looks like a flat white sheet.
+const STAGE_TOP = '#D3CDC2';
+const STAGE_BOTTOM = '#B4AC9E';
+const INK_MUTED = 'rgba(32,29,24,0.55)';
+
+// Arrows float over the stage so the garments get the full width.
+const ARROW_GUTTER = 52;
 
 export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStudioProps) {
   const { t } = useLocale();
-
   const rows = ROWS.filter((row) => counts[row.category] > 0);
 
   return (
@@ -40,21 +40,15 @@ export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStud
       colors={[STAGE_TOP, STAGE_BOTTOM]}
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
-      style={{
-        borderRadius: 28,
-        overflow: 'hidden',
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.sm,
-      }}
+      style={{ borderRadius: 28, overflow: 'hidden', paddingVertical: spacing.lg }}
     >
-      {rows.map((row, index) => (
+      {rows.map((row) => (
         <GarmentRow
           key={row.category}
           height={row.height}
           item={current(row.category)}
           label={t(categoryKey(row.category))}
-          canCycle={row.category === 'jacket' ? counts.jacket > 0 : counts[row.category] > 1}
-          showDivider={index < rows.length - 1}
+          canCycle={counts[row.category] > 1}
           onPrevious={() => onPrevious(row.category)}
           onNext={() => onNext(row.category)}
         />
@@ -65,12 +59,12 @@ export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStud
         pointerEvents="none"
         style={{
           alignSelf: 'center',
-          width: 190,
-          height: 12,
+          width: 210,
+          height: 14,
           borderRadius: radius.full,
-          backgroundColor: 'rgba(21,21,23,0.13)',
+          backgroundColor: 'rgba(32,29,24,0.16)',
           transform: [{ scaleY: 0.4 }],
-          marginTop: spacing.xs,
+          marginTop: spacing.sm,
         }}
       />
     </LinearGradient>
@@ -82,7 +76,6 @@ function GarmentRow({
   label,
   height,
   canCycle,
-  showDivider,
   onPrevious,
   onNext,
 }: {
@@ -90,56 +83,50 @@ function GarmentRow({
   label: string;
   height: number;
   canCycle: boolean;
-  showDivider: boolean;
   onPrevious: () => void;
   onNext: () => void;
 }) {
   return (
-    <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', height }}>
-        <Arrow direction="back" disabled={!canCycle} onPress={onPrevious} />
-
-        <View style={{ flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-          {item ? (
-            <Image
-              source={{ uri: item.photo_clean_url ?? item.photo_url }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="contain"
-              transition={180}
-              cachePolicy="memory-disk"
-            />
-          ) : (
+    <View style={{ height, justifyContent: 'center' }}>
+      {/* Garment takes the full stage width */}
+      <View style={{ paddingHorizontal: ARROW_GUTTER, height: '100%' }}>
+        {item ? (
+          <Image
+            source={{ uri: item.photo_clean_url ?? item.photo_url }}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={[typography.caption, { color: INK_MUTED }]}>—</Text>
-          )}
-        </View>
-
-        <Arrow direction="forward" disabled={!canCycle} onPress={onNext} />
+          </View>
+        )}
       </View>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingBottom: showDivider ? spacing.sm : 0,
-        }}
+      {/* Label sits discreetly bottom-left of the row */}
+      <Text
+        style={[
+          typography.eyebrow,
+          { color: INK_MUTED, fontSize: 9, position: 'absolute', left: spacing.md, bottom: 4 },
+        ]}
       >
-        <Text style={[typography.eyebrow, { color: INK_MUTED, fontSize: 9 }]}>{label}</Text>
-      </View>
+        {label}
+      </Text>
 
-      {showDivider ? (
-        <View style={{ height: 1, backgroundColor: STAGE_LINE, marginBottom: spacing.sm }} />
-      ) : null}
+      <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
+      <Arrow side="right" disabled={!canCycle} onPress={onNext} />
     </View>
   );
 }
 
 function Arrow({
-  direction,
+  side,
   disabled,
   onPress,
 }: {
-  direction: 'back' | 'forward';
+  side: 'left' | 'right';
   disabled: boolean;
   onPress: () => void;
 }) {
@@ -151,24 +138,28 @@ function Arrow({
       hitSlop={10}
       onPress={onPress}
       style={({ pressed }) => ({
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        position: 'absolute',
+        [side]: 6,
+        top: '50%',
+        marginTop: -21,
+        width: 42,
+        height: 42,
+        borderRadius: 21,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: disabled
-          ? 'rgba(21,21,23,0.06)'
+          ? 'rgba(32,29,24,0.08)'
           : pressed
             ? colors.accent
-            : 'rgba(21,21,23,0.9)',
-        opacity: disabled ? 0.5 : 1,
-        transform: [{ scale: pressed ? 0.93 : 1 }],
+            : 'rgba(26,24,20,0.82)',
+        opacity: disabled ? 0.4 : 1,
+        transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
       <Ionicons
-        name={direction === 'back' ? 'chevron-back' : 'chevron-forward'}
+        name={side === 'left' ? 'chevron-back' : 'chevron-forward'}
         size={22}
-        color={disabled ? INK_MUTED : '#F9F9F5'}
+        color={disabled ? INK_MUTED : '#F7F5F0'}
       />
     </Pressable>
   );
