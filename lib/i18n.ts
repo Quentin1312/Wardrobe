@@ -1,8 +1,8 @@
 export type Locale = 'fr' | 'en';
 
-export const LOCALES: { code: Locale; label: string; flag: string }[] = [
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
+export const LOCALES: { code: Locale; label: string }[] = [
+  { code: 'fr', label: 'Français' },
+  { code: 'en', label: 'English' },
 ];
 
 type Dict = Record<string, string>;

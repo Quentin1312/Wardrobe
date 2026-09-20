@@ -35,7 +35,22 @@ export default function SelectLanguage() {
                 backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
               })}
             >
-              <Text style={{ fontSize: 30 }}>{l.flag}</Text>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: radius.full,
+                  backgroundColor: colors.surfaceAlt,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={[typography.caption, { color: colors.textMuted }]}>
+                  {l.code.toUpperCase()}
+                </Text>
+              </View>
               <Text style={[typography.h3, { color: colors.text, flex: 1 }]}>{l.label}</Text>
               <Ionicons name="chevron-forward" size={22} color={colors.textMuted} />
             </Pressable>

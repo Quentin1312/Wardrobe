@@ -37,7 +37,7 @@ export function LanguageSwitch() {
                 { color: active ? colors.primaryText : colors.textMuted },
               ]}
             >
-              {l.flag} {l.code.toUpperCase()}
+              {l.code.toUpperCase()}
             </Text>
           </Pressable>
         );
