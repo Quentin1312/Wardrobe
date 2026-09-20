@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Wardrobe",
+    "slug": "wardrobe",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "wardrobe",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wardrobe.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Wardrobe needs your camera to photograph you and your clothes.",
+        "NSPhotoLibraryUsageDescription": "Wardrobe needs access to your photos to add clothing items."
+      }
+    },
+    "android": {
+      "package": "com.wardrobe.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Wardrobe needs your camera to photograph you and your clothes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Wardrobe needs access to your photos to add clothing items."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "",
+      "supabaseAnonKey": ""
+    }
+  }
+}

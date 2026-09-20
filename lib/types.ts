@@ -1,0 +1,46 @@
+// Mirrors the Supabase schema in supabase/schema.sql
+
+export type ClothingCategory =
+  | 'top'
+  | 'bottom'
+  | 'shoes'
+  | 'jacket'
+  | 'accessory';
+
+export interface Profile {
+  id: string; // = auth.users.id
+  email: string | null;
+  profile_photo_url: string | null;
+  profile_photo_clean_url: string | null; // after SAM
+  location_city: string | null;
+  onboarded: boolean;
+  created_at: string;
+}
+
+export interface Clothing {
+  id: string;
+  user_id: string;
+  photo_url: string;
+  photo_clean_url: string | null; // after SAM
+  category: ClothingCategory | null;
+  dominant_color: string | null; // hex
+  style_tags: string[] | null;
+  created_at: string;
+}
+
+export interface Outfit {
+  id: string;
+  user_id: string;
+  clothes_ids: string[];
+  generated_at: string;
+  weather_context: string | null; // temp + condition at generation time
+  liked: boolean | null; // true / false / null
+}
+
+export interface TryonResult {
+  id: string;
+  user_id: string;
+  outfit_id: string;
+  result_image_url: string;
+  generated_at: string;
+}
