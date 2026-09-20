@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/instrument-serif';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -25,6 +26,11 @@ function RootNavigator() {
   const { colors: themeColors, dark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+
+  // Paint the native root view so the status-bar area matches the app.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(themeColors.bg).catch(() => {});
+  }, [themeColors.bg]);
 
   useEffect(() => {
     if (loading || !ready) return;

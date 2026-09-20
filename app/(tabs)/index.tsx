@@ -1,22 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { OutfitCard } from '@/components/OutfitCard';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { useWeather } from '@/hooks/useWeather';
-import {
-  clothesMap,
-  fetchTodayOutfits,
-  generateOutfits,
-  setOutfitLiked,
-  type SuggestedOutfit,
-} from '@/lib/outfits';
-import type { Clothing } from '@/lib/types';
 import type { Weather } from '@/lib/weather';
 import type { Locale } from '@/lib/i18n';
 
@@ -37,79 +28,25 @@ function todayLabel(locale: Locale): string {
 
 export default function Today() {
   const { colors } = useTheme();
-  const { session, profile } = useAuth();
+  const { profile } = useAuth();
   const { t, locale } = useLocale();
   const { state } = useWeather();
-  const [outfits, setOutfits] = useState<SuggestedOutfit[]>([]);
-  const [clothes, setClothes] = useState<Map<string, Clothing>>(new Map());
-  const [generating, setGenerating] = useState(false);
-  const [genMessage, setGenMessage] = useState<string | null>(null);
-
-  const weather = state.status === 'ready' ? state.weather : null;
-
-  useEffect(() => {
-    if (!session?.user) return;
-    (async () => {
-      try {
-        const [today, map] = await Promise.all([
-          fetchTodayOutfits(session.user.id),
-          clothesMap(session.user.id),
-        ]);
-        setOutfits(today);
-        setClothes(map);
-      } catch {
-        // non-fatal
-      }
-    })();
-  }, [session]);
-
-  const onGenerate = useCallback(async () => {
-    if (!session?.user) return;
-    setGenerating(true);
-    setGenMessage(null);
-    try {
-      const map = await clothesMap(session.user.id);
-      setClothes(map);
-      const w = weather ? { temp: weather.temp, condition: weather.condition } : null;
-      const { outfits: fresh, error } = await generateOutfits(w);
-      if (error === 'not_enough_items') {
-        setGenMessage(t('today.tooFewBody'));
-      } else if (error === 'empty' || error === 'no_valid_outfit') {
-        setGenMessage(t('today.noOutfitBody'));
-      } else if (error) {
-        // Show the raw error so the real cause is visible (works on web too).
-        setGenMessage(error);
-      } else {
-        setOutfits((prev) => [...fresh, ...prev]);
-      }
-    } catch (e: any) {
-      setGenMessage(e?.message ?? 'Generation failed.');
-    } finally {
-      setGenerating(false);
-    }
-  }, [session, weather, t]);
-
-  async function rate(id: string, liked: boolean) {
-    setOutfits((prev) => prev.filter((o) => o.id !== id));
-    try {
-      await setOutfitLiked(id, liked);
-    } catch {
-      // optimistic
-    }
-  }
+  const router = useRouter();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           width: '100%',
           maxWidth: 760,
           alignSelf: 'center',
           padding: spacing.screen,
           gap: spacing.lg,
-          paddingBottom: 128,
+          paddingBottom: 132,
         }}
       >
+        {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md }}>
           <View style={{ gap: 4, flex: 1 }}>
             <Text style={[typography.eyebrow, { color: colors.accent }]}>WARDROBE / TODAY</Text>
@@ -129,14 +66,14 @@ export default function Today() {
               overflow: 'hidden',
               alignItems: 'center',
               justifyContent: 'center',
-              transform: [{ rotate: '3deg' }],
             }}
           >
             {profile?.profile_photo_clean_url || profile?.profile_photo_url ? (
               <Image
                 source={{ uri: profile.profile_photo_clean_url ?? profile.profile_photo_url ?? '' }}
                 style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
               />
             ) : (
               <Ionicons name="person" size={22} color={colors.textMuted} />
@@ -144,6 +81,7 @@ export default function Today() {
           </View>
         </View>
 
+        {/* Weather */}
         {state.status === 'loading' ? (
           <View
             style={{
@@ -170,68 +108,26 @@ export default function Today() {
           </View>
         )}
 
-        <View style={{ gap: spacing.md }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ gap: 2 }}>
-              <Text style={[typography.eyebrow, { color: colors.textMuted }]}>AI STYLIST</Text>
-              <Text style={[typography.h2, { color: colors.text }]}>{t('today.outfits')}</Text>
-            </View>
-            <Pressable
-              onPress={onGenerate}
-              disabled={generating}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.xs,
-                paddingVertical: 8,
-                paddingHorizontal: spacing.md,
-                borderRadius: radius.full,
-                backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-                opacity: generating ? 0.5 : 1,
-              })}
-            >
-              {generating ? (
-                <ActivityIndicator size="small" color={colors.primaryText} />
-              ) : (
-                <Ionicons name="color-wand-outline" size={16} color={colors.primaryText} />
-              )}
-              <Text style={[typography.caption, { color: colors.primaryText }]}>
-                {generating ? t('today.generating') : t('today.generate')}
-              </Text>
-            </Pressable>
+        {/* Single clear action: go build today's look */}
+        <Pressable
+          onPress={() => router.push('/(tabs)/outfit')}
+          style={({ pressed }) => ({
+            borderRadius: radius.xl,
+            backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: spacing.lg,
+            gap: spacing.sm,
+          })}
+        >
+          <Text style={[typography.eyebrow, { color: colors.textMuted }]}>{t('today.lookEyebrow')}</Text>
+          <Text style={[typography.h2, { color: colors.text }]}>{t('today.lookTitle')}</Text>
+          <Text style={[typography.small, { color: colors.textMuted }]}>{t('today.lookBody')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.xs }}>
+            <Text style={[typography.button, { color: colors.accent }]}>{t('today.lookCta')}</Text>
+            <Ionicons name="arrow-forward" size={18} color={colors.accent} />
           </View>
-
-          {genMessage ? (
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: spacing.sm,
-                padding: spacing.md,
-                borderRadius: radius.md,
-                borderWidth: 1,
-                borderColor: colors.accent,
-                backgroundColor: colors.accentSoft,
-              }}
-            >
-              <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
-              <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{genMessage}</Text>
-            </View>
-          ) : null}
-
-          {outfits.length === 0 ? (
-            <EmptySuggestions />
-          ) : (
-            outfits.map((o) => (
-              <OutfitCard
-                key={o.id}
-                outfit={o}
-                clothes={clothes}
-                onLike={() => rate(o.id, true)}
-                onSkip={() => rate(o.id, false)}
-              />
-            ))
-          )}
-        </View>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -241,20 +137,7 @@ function WeatherCard({ weather }: { weather: Weather }) {
   const { colors } = useTheme();
   const { t } = useLocale();
   return (
-    <View style={{ backgroundColor: colors.hero, borderRadius: radius.xl, padding: spacing.lg, overflow: 'hidden' }}>
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          width: 170,
-          height: 170,
-          borderRadius: 85,
-          right: -52,
-          top: -62,
-          backgroundColor: colors.accent,
-          opacity: 0.35,
-        }}
-      />
+    <View style={{ backgroundColor: colors.hero, borderRadius: radius.xl, padding: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         <Ionicons name="location-outline" size={16} color={colors.heroMuted} />
         <Text style={[typography.caption, { color: colors.heroMuted }]}>{weather.city}</Text>
@@ -274,9 +157,7 @@ function WeatherCard({ weather }: { weather: Weather }) {
             {weather.condition}
           </Text>
         </View>
-        <View style={{ width: 82, height: 82, borderRadius: 28, backgroundColor: colors.heroAccent, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '6deg' }] }}>
-          <Ionicons name={weather.icon} size={48} color={colors.energyText} />
-        </View>
+        <Ionicons name={weather.icon} size={76} color={colors.heroAccent} />
       </View>
 
       <View
@@ -303,47 +184,6 @@ function WeatherStat({ label, value }: { label: string; value: string }) {
     <View>
       <Text style={[typography.caption, { color: colors.heroMuted }]}>{label}</Text>
       <Text style={[typography.h3, { color: colors.heroText }]}>{value}</Text>
-    </View>
-  );
-}
-
-function EmptySuggestions() {
-  const { colors } = useTheme();
-  const { t } = useLocale();
-  const router = useRouter();
-  return (
-    <View
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: spacing.lg,
-        alignItems: 'center',
-        gap: spacing.sm,
-      }}
-    >
-      <Ionicons name="color-wand-outline" size={36} color={colors.textMuted} />
-      <Text style={[typography.h3, { color: colors.text, textAlign: 'center' }]}>
-        {t('today.noOutfitsTitle')}
-      </Text>
-      <Text style={[typography.small, { color: colors.textMuted, textAlign: 'center' }]}>
-        {t('today.noOutfitsBody')}
-      </Text>
-      <Pressable
-        onPress={() => router.push('/(tabs)/wardrobe')}
-        style={({ pressed }) => ({
-          marginTop: spacing.xs,
-          paddingVertical: 10,
-          paddingHorizontal: spacing.lg,
-          borderRadius: radius.full,
-          borderWidth: 1,
-          borderColor: colors.borderStrong,
-          backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
-        })}
-      >
-        <Text style={[typography.button, { color: colors.text }]}>{t('today.myWardrobe')}</Text>
-      </Pressable>
     </View>
   );
 }

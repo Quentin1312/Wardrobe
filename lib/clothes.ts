@@ -33,6 +33,19 @@ export async function addClothing(input: {
   return data as Clothing;
 }
 
+export async function renameClothing(id: string, name: string): Promise<void> {
+  const { error } = await supabase
+    .from('clothes')
+    .update({ name: name.trim() || null })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function setClothingFavorite(id: string, favorite: boolean): Promise<void> {
+  const { error } = await supabase.from('clothes').update({ favorite }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteClothing(id: string): Promise<void> {
   const { error } = await supabase.from('clothes').delete().eq('id', id);
   if (error) throw error;

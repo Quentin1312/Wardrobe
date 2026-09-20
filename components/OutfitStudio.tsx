@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, Text, View } from 'react-native';
 import { categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
@@ -13,190 +14,157 @@ interface OutfitStudioProps {
   onNext: (category: ClothingCategory) => void;
 }
 
-type SlotConfig = {
-  category: ClothingCategory;
-  top: number;
-  imageTop: number;
-  width: number;
-  height: number;
-  zIndex: number;
-};
-
-const SLOTS: SlotConfig[] = [
-  { category: 'jacket', top: 112, imageTop: 98, width: 238, height: 182, zIndex: 8 },
-  { category: 'top', top: 174, imageTop: 121, width: 215, height: 164, zIndex: 6 },
-  { category: 'bottom', top: 303, imageTop: 250, width: 190, height: 178, zIndex: 4 },
-  { category: 'shoes', top: 426, imageTop: 405, width: 205, height: 76, zIndex: 10 },
+// Stacked top-to-bottom like a look, each piece in its own generous row.
+const ROWS: { category: ClothingCategory; height: number }[] = [
+  { category: 'jacket', height: 148 },
+  { category: 'top', height: 156 },
+  { category: 'bottom', height: 176 },
+  { category: 'shoes', height: 104 },
 ];
 
-const PAPER = '#F1F1EC';
-const PAPER_INK = '#151517';
-const PAPER_MUTED = '#6F6F6A';
+// Light studio stage so both dark and light garments read well.
+const STAGE = '#EFEEE9';
+const STAGE_LINE = 'rgba(21,21,23,0.07)';
+const INK_MUTED = '#8A8A84';
 
 export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStudioProps) {
-  const { colors } = useTheme();
   const { t } = useLocale();
-  const { width } = useWindowDimensions();
-  const stageWidth = Math.min(430, width - spacing.screen * 2);
 
-  return (
-    <View style={{ gap: spacing.sm }}>
-      <View
-        style={{
-          width: stageWidth,
-          height: 510,
-          alignSelf: 'center',
-          borderRadius: radius.xl,
-          overflow: 'hidden',
-          backgroundColor: PAPER,
-          borderWidth: 1,
-          borderColor: colors.border,
-        }}
-      >
-        {SLOTS.map((slot) => (
-          <GarmentSlot
-            key={slot.category}
-            {...slot}
-            item={current(slot.category)}
-            count={counts[slot.category]}
-            label={t(categoryKey(slot.category))}
-            onPrevious={() => onPrevious(slot.category)}
-            onNext={() => onNext(slot.category)}
-          />
-        ))}
-
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            bottom: 14,
-            alignSelf: 'center',
-            width: 182,
-            height: 14,
-            borderRadius: radius.full,
-            backgroundColor: 'rgba(21,21,23,0.18)',
-            transform: [{ scaleY: 0.35 }],
-          }}
-        />
-      </View>
-    </View>
-  );
-}
-
-function GarmentSlot({
-  category,
-  item,
-  count,
-  label,
-  top,
-  imageTop,
-  width,
-  height,
-  zIndex,
-  onPrevious,
-  onNext,
-}: SlotConfig & {
-  item: Clothing | null;
-  count: number;
-  label: string;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
-  const canCycle = category === 'jacket' ? count > 0 : count > 1;
-  const imageStyle = Platform.OS === 'web' ? ({ mixBlendMode: 'multiply' } as any) : undefined;
+  const rows = ROWS.filter((row) => counts[row.category] > 0);
 
   return (
     <View
-      pointerEvents="box-none"
-      style={{ position: 'absolute', top, left: 10, right: 10, height: 48, zIndex: 20 + zIndex }}
+      style={{
+        borderRadius: 28,
+        backgroundColor: STAGE,
+        overflow: 'hidden',
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.sm,
+      }}
     >
+      {rows.map((row, index) => (
+        <GarmentRow
+          key={row.category}
+          height={row.height}
+          item={current(row.category)}
+          label={t(categoryKey(row.category))}
+          canCycle={row.category === 'jacket' ? counts.jacket > 0 : counts[row.category] > 1}
+          showDivider={index < rows.length - 1}
+          onPrevious={() => onPrevious(row.category)}
+          onNext={() => onNext(row.category)}
+        />
+      ))}
+
+      {/* Grounding shadow under the look */}
       <View
         pointerEvents="none"
         style={{
-          position: 'absolute',
-          left: 48,
-          top: 13,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
+          alignSelf: 'center',
+          width: 190,
+          height: 12,
           borderRadius: radius.full,
-          backgroundColor: 'rgba(241,241,236,0.88)',
-          zIndex: 30,
+          backgroundColor: 'rgba(21,21,23,0.13)',
+          transform: [{ scaleY: 0.4 }],
+          marginTop: spacing.xs,
         }}
-      >
-        <Text style={[typography.eyebrow, { color: PAPER_MUTED, fontSize: 9 }]}>{label}</Text>
-      </View>
-
-      {item ? (
-        <Image
-          source={{ uri: item.photo_clean_url ?? item.photo_url }}
-          resizeMode="contain"
-          style={[
-            {
-              position: 'absolute',
-              top: imageTop - top,
-              alignSelf: 'center',
-              width,
-              height,
-              zIndex,
-            },
-            imageStyle,
-          ]}
-        />
-      ) : null}
-
-      <ArrowButton
-        direction="back"
-        label={`${label} précédent`}
-        disabled={!canCycle}
-        onPress={onPrevious}
-      />
-      <ArrowButton
-        direction="forward"
-        label={`${label} suivant`}
-        disabled={!canCycle}
-        onPress={onNext}
       />
     </View>
   );
 }
 
-function ArrowButton({
-  direction,
+function GarmentRow({
+  item,
   label,
+  height,
+  canCycle,
+  showDivider,
+  onPrevious,
+  onNext,
+}: {
+  item: Clothing | null;
+  label: string;
+  height: number;
+  canCycle: boolean;
+  showDivider: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', height }}>
+        <Arrow direction="back" disabled={!canCycle} onPress={onPrevious} />
+
+        <View style={{ flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+          {item ? (
+            <Image
+              source={{ uri: item.photo_clean_url ?? item.photo_url }}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+              transition={180}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <Text style={[typography.caption, { color: INK_MUTED }]}>—</Text>
+          )}
+        </View>
+
+        <Arrow direction="forward" disabled={!canCycle} onPress={onNext} />
+      </View>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingBottom: showDivider ? spacing.sm : 0,
+        }}
+      >
+        <Text style={[typography.eyebrow, { color: INK_MUTED, fontSize: 9 }]}>{label}</Text>
+      </View>
+
+      {showDivider ? (
+        <View style={{ height: 1, backgroundColor: STAGE_LINE, marginBottom: spacing.sm }} />
+      ) : null}
+    </View>
+  );
+}
+
+function Arrow({
+  direction,
   disabled,
   onPress,
 }: {
   direction: 'back' | 'forward';
-  label: string;
   disabled: boolean;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
-      accessibilityLabel={label}
+      accessibilityRole="button"
       disabled={disabled}
-      hitSlop={8}
+      hitSlop={10}
       onPress={onPress}
       style={({ pressed }) => ({
-        position: 'absolute',
-        [direction === 'back' ? 'left' : 'right']: 0,
-        width: 42,
-        height: 42,
-        borderRadius: 21,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: disabled ? 'rgba(21,21,23,0.12)' : pressed ? colors.accent : PAPER_INK,
-        opacity: disabled ? 0.45 : 1,
-        transform: [{ scale: pressed ? 0.94 : 1 }],
+        backgroundColor: disabled
+          ? 'rgba(21,21,23,0.06)'
+          : pressed
+            ? colors.accent
+            : 'rgba(21,21,23,0.9)',
+        opacity: disabled ? 0.5 : 1,
+        transform: [{ scale: pressed ? 0.93 : 1 }],
       })}
     >
       <Ionicons
         name={direction === 'back' ? 'chevron-back' : 'chevron-forward'}
-        size={21}
-        color={disabled ? PAPER_MUTED : '#F9F9F5'}
+        size={22}
+        color={disabled ? INK_MUTED : '#F9F9F5'}
       />
     </Pressable>
   );
 }
-

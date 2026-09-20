@@ -21,6 +21,8 @@ export interface Profile {
 export interface Clothing {
   id: string;
   user_id: string;
+  name: string | null;
+  favorite: boolean;
   photo_url: string;
   photo_clean_url: string | null; // after SAM
   category: ClothingCategory | null;

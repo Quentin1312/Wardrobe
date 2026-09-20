@@ -25,6 +25,8 @@ create table if not exists public.profiles (
 create table if not exists public.clothes (
   id               uuid primary key default gen_random_uuid(),
   user_id          uuid not null references public.profiles(id) on delete cascade,
+  name             text,
+  favorite         boolean not null default false,
   photo_url        text not null,
   photo_clean_url  text,                       -- after SAM background removal
   category         clothing_category,
