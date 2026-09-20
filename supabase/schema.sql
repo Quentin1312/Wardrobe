@@ -27,6 +27,7 @@ create table if not exists public.clothes (
   user_id          uuid not null references public.profiles(id) on delete cascade,
   name             text,
   favorite         boolean not null default false,
+  dirty            boolean not null default false,
   photo_url        text not null,
   photo_clean_url  text,                       -- after SAM background removal
   category         clothing_category,

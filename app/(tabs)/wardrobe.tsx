@@ -5,15 +5,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
+import { WashCycle } from '@/components/WashCycle';
 import { CATEGORIES, categoryKey } from '@/constants/categories';
 import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { fetchClothes } from '@/lib/clothes';
+import { fetchClothes, washAll } from '@/lib/clothes';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
-type Filter = ClothingCategory | 'all' | 'fav';
+type Filter = ClothingCategory | 'all' | 'fav' | 'dirty';
 
 export default function Wardrobe() {
   const { colors, dark } = useTheme();
@@ -25,6 +26,7 @@ export default function Wardrobe() {
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [washing, setWashing] = useState(false);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -44,13 +46,23 @@ export default function Wardrobe() {
     [items]
   );
   const hasFavorites = items.some((i) => i.favorite);
+  const dirtyCount = items.filter((i) => i.dirty).length;
 
   const shown =
     filter === 'all'
       ? items
       : filter === 'fav'
         ? items.filter((i) => i.favorite)
-        : items.filter((i) => i.category === filter);
+        : filter === 'dirty'
+          ? items.filter((i) => i.dirty)
+          : items.filter((i) => i.category === filter);
+
+  function onWashAll() {
+    if (!session?.user || dirtyCount === 0) return;
+    setWashing(true);
+    // Run the update while the cycle animation plays.
+    washAll(session.user.id).catch(() => {});
+  }
 
   // Keep the add button clear of the floating tab bar.
   const fabBottom = (insets.bottom > 0 ? insets.bottom : 14) + 62 + 16;
@@ -106,6 +118,14 @@ export default function Wardrobe() {
                     onPress={() => setFilter('fav')}
                   />
                 ) : null}
+                {dirtyCount > 0 ? (
+                  <Chip
+                    label={`${t('laundry.dirty')} · ${dirtyCount}`}
+                    icon="water-outline"
+                    active={filter === 'dirty'}
+                    onPress={() => setFilter('dirty')}
+                  />
+                ) : null}
                 {usedCategories.map((c) => (
                   <Chip
                     key={c.key}
@@ -115,6 +135,27 @@ export default function Wardrobe() {
                   />
                 ))}
               </ScrollView>
+
+              {dirtyCount > 0 ? (
+                <Pressable
+                  onPress={onWashAll}
+                  style={({ pressed }) => ({
+                    marginTop: spacing.md,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: spacing.sm,
+                    paddingVertical: 14,
+                    borderRadius: radius.full,
+                    backgroundColor: pressed ? colors.accentSoft : colors.energy,
+                  })}
+                >
+                  <Ionicons name="water" size={18} color={colors.energyText} />
+                  <Text style={[typography.button, { color: colors.energyText }]}>
+                    {t('laundry.washAll')}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           }
           renderItem={({ item }) => (
@@ -142,6 +183,15 @@ export default function Wardrobe() {
       >
         <Ionicons name="add" size={30} color={colors.energyText} />
       </Pressable>
+
+      <WashCycle
+        visible={washing}
+        onDone={() => {
+          setWashing(false);
+          setFilter('all');
+          load();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -204,11 +254,32 @@ function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }
       <View style={{ backgroundColor: '#EFEEE9', padding: spacing.sm }}>
         <Image
           source={{ uri }}
-          style={{ width: '100%', aspectRatio: 1 }}
+          style={{ width: '100%', aspectRatio: 1, opacity: item.dirty ? 0.45 : 1 }}
           contentFit="contain"
           transition={180}
           cachePolicy="memory-disk"
         />
+        {item.dirty ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: 8,
+              bottom: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingVertical: 4,
+              paddingHorizontal: 8,
+              borderRadius: radius.full,
+              backgroundColor: 'rgba(21,21,23,0.85)',
+            }}
+          >
+            <Ionicons name="water" size={11} color="#9BB7E8" />
+            <Text style={[typography.caption, { color: '#FFFFFF', fontSize: 9 }]}>
+              {t('laundry.badge')}
+            </Text>
+          </View>
+        ) : null}
         {item.favorite ? (
           <View
             style={{

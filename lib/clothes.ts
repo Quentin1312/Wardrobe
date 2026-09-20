@@ -56,6 +56,28 @@ export async function setClothingFavorite(id: string, favorite: boolean): Promis
   if (error) throw error;
 }
 
+export async function setClothingDirty(id: string, dirty: boolean): Promise<void> {
+  const { error } = await supabase.from('clothes').update({ dirty }).eq('id', id);
+  if (error) throw error;
+}
+
+/** Sends a whole outfit to the laundry basket after it has been worn. */
+export async function markOutfitDirty(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabase.from('clothes').update({ dirty: true }).in('id', ids);
+  if (error) throw error;
+}
+
+/** Laundry day: everything comes back clean. */
+export async function washAll(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('clothes')
+    .update({ dirty: false })
+    .eq('user_id', userId)
+    .eq('dirty', true);
+  if (error) throw error;
+}
+
 export async function deleteClothing(id: string): Promise<void> {
   const { error } = await supabase.from('clothes').delete().eq('id', id);
   if (error) throw error;

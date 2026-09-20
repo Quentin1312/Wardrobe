@@ -23,6 +23,8 @@ export interface Clothing {
   user_id: string;
   name: string | null;
   favorite: boolean;
+  /** In the laundry basket — excluded from outfit suggestions. */
+  dirty: boolean;
   photo_url: string;
   photo_clean_url: string | null; // after SAM
   category: ClothingCategory | null;

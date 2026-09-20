@@ -20,6 +20,7 @@ import {
   fetchClothing,
   removeBackground,
   renameClothing,
+  setClothingDirty,
   setClothingFavorite,
 } from '@/lib/clothes';
 import type { Clothing } from '@/lib/types';
@@ -70,6 +71,17 @@ export default function ItemSheet() {
     setItem({ ...item, favorite: next });
     try {
       await setClothingFavorite(item.id, next);
+    } catch {
+      load();
+    }
+  }
+
+  async function onToggleDirty() {
+    if (!item) return;
+    const next = !item.dirty;
+    setItem({ ...item, dirty: next });
+    try {
+      await setClothingDirty(item.id, next);
     } catch {
       load();
     }
@@ -253,6 +265,11 @@ export default function ItemSheet() {
             label={item.favorite ? t('wardrobe.unfavorite') : t('wardrobe.favorite')}
             onPress={onToggleFavorite}
             tint={item.favorite ? colors.energy : undefined}
+          />
+          <ActionRow
+            icon={item.dirty ? 'sparkles-outline' : 'water-outline'}
+            label={item.dirty ? t('laundry.markClean') : t('laundry.markDirty')}
+            onPress={onToggleDirty}
           />
           <ActionRow icon="cut-outline" label={t('wardrobe.removeBg')} onPress={onDetour} />
           <ActionRow icon="trash-outline" label={t('common.delete')} onPress={onDelete} danger />

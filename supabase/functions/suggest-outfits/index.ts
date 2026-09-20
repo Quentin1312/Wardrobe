@@ -53,10 +53,12 @@ Deno.serve(async (req) => {
 
     const { weather, count = 3 } = await req.json().catch(() => ({}));
 
+    // Dirty laundry is not available to wear today.
     const { data: clothes, error: clothesErr } = await supabase
       .from('clothes')
       .select('id, category, dominant_color, style_tags')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('dirty', false);
     if (clothesErr) return json({ error: clothesErr.message }, 500);
 
     const items = (clothes ?? []) as ClothingRow[];

@@ -12,7 +12,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
-import { fetchClothes } from '@/lib/clothes';
+import { LaundryDrop } from '@/components/LaundryDrop';
+import { fetchClothes, markOutfitDirty } from '@/lib/clothes';
 import { generateOutfits, saveWornOutfit } from '@/lib/outfits';
 import { generateTryOn } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
@@ -46,6 +47,8 @@ export default function OutfitDay() {
   const [styling, setStyling] = useState(false);
   const [styleMsg, setStyleMsg] = useState<string | null>(null);
   const [styled, setStyled] = useState(false);
+  const [showBasket, setShowBasket] = useState(false);
+  const [basketItems, setBasketItems] = useState<Clothing[]>([]);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -53,7 +56,8 @@ export default function OutfitDay() {
     try {
       const items = await fetchClothes(session.user.id);
       const next = emptyBuckets();
-      for (const item of items) if (item.category) next[item.category].push(item);
+      // Dirty laundry is not wearable today.
+      for (const item of items) if (item.category && !item.dirty) next[item.category].push(item);
       setBuckets(next);
       setIdx(INITIAL_INDICES);
       setSaved(false);
@@ -168,8 +172,21 @@ export default function OutfitDay() {
   }
 
   async function validate() {
+    const worn = (['top', 'bottom', 'shoes'] as ClothingCategory[])
+      .map((category) => current(category))
+      .filter((piece): piece is Clothing => Boolean(piece));
+
     await persistCurrentOutfit();
     setSaved(true);
+
+    // Worn today → straight into the laundry basket.
+    try {
+      await markOutfitDirty(worn.map((piece) => piece.id));
+    } catch {
+      // the look is saved either way
+    }
+    setBasketItems(worn);
+    setShowBasket(true);
   }
 
   async function runTryOn() {
@@ -347,6 +364,16 @@ export default function OutfitDay() {
       )}
 
       <StylistLoader visible={styling} />
+
+      <LaundryDrop
+        visible={showBasket}
+        items={basketItems}
+        onDone={() => {
+          setShowBasket(false);
+          setBasketItems([]);
+          load();
+        }}
+      />
 
       <TryOnSheet
         visible={tryOnOpen}
