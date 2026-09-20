@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "wardrobe",
+    "backgroundColor": "#0B0B0C",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -28,7 +29,11 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "lang": "fr",
+      "themeColor": "#0B0B0C",
+      "backgroundColor": "#0B0B0C",
+      "barStyle": "black-translucent"
     },
     "plugins": [
       "expo-router",

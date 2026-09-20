@@ -22,7 +22,7 @@ import { colors } from '@/constants/theme';
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
   const { chosen, ready } = useLocale();
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, dark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
@@ -61,18 +61,21 @@ function RootNavigator() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: themeColors.bg },
-      }}
-    >
-      <Stack.Screen name="select-language" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(onboarding)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="add-item" options={{ presentation: 'modal' }} />
-    </Stack>
+    <>
+      <StatusBar style={dark ? 'light' : 'dark'} backgroundColor={themeColors.bg} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: themeColors.bg },
+        }}
+      >
+        <Stack.Screen name="select-language" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(onboarding)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="add-item" options={{ presentation: 'modal' }} />
+      </Stack>
+    </>
   );
 }
 
@@ -99,7 +102,6 @@ export default function RootLayout() {
       <ThemeProvider>
         <LocaleProvider>
           <AuthProvider>
-            <StatusBar style="auto" />
             <RootNavigator />
           </AuthProvider>
         </LocaleProvider>

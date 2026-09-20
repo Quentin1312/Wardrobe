@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { CATEGORIES, categoryKey } from '@/constants/categories';
 import { radius, shadows, spacing, typography } from '@/constants/theme';
@@ -26,6 +26,7 @@ export default function Wardrobe() {
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ClothingCategory | 'all'>('all');
@@ -118,7 +119,7 @@ export default function Wardrobe() {
           numColumns={2}
           style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}
           contentContainerStyle={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm, paddingBottom: 128 }}
-          columnWrapperStyle={{ gap: spacing.md }}
+          columnWrapperStyle={{ gap: spacing.md, justifyContent: 'flex-start' }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           renderItem={({ item }) => <ClothingCard item={item} onLongPress={() => onDelete(item)} />}
         />
@@ -129,7 +130,7 @@ export default function Wardrobe() {
         style={({ pressed }) => ({
           position: 'absolute',
           right: spacing.screen,
-          bottom: 98,
+          bottom: 82 + Math.max(insets.bottom, 8),
           width: 60,
           height: 60,
           borderRadius: 22,
@@ -152,12 +153,16 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
     <Pressable
       onPress={onPress}
       style={{
+        flexShrink: 0,
+        minHeight: 40,
         paddingVertical: 8,
         paddingHorizontal: spacing.md,
         borderRadius: radius.full,
-        borderWidth: active ? 0 : 1,
-        borderColor: colors.border,
+        borderWidth: 1,
+        borderColor: active ? colors.primary : colors.border,
         backgroundColor: active ? colors.primary : colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       <Text style={[typography.caption, { color: active ? colors.primaryText : colors.textMuted }]}>
@@ -176,17 +181,19 @@ function ClothingCard({ item, onLongPress }: { item: Clothing; onLongPress: () =
       onLongPress={onLongPress}
       delayLongPress={350}
       style={{
-        flex: 1,
+        width: '47.5%',
+        flexGrow: 0,
         backgroundColor: colors.surface,
         borderRadius: radius.lg,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.border,
       }}
     >
-      {/* Light tile + contain so the full garment is visible (no cropping). */}
-      <View style={{ backgroundColor: '#F7F7F4', padding: spacing.sm }}>
+      <View style={{ backgroundColor: '#F1F1EC', padding: spacing.sm }}>
         <Image source={{ uri }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="contain" />
       </View>
-      <View style={{ paddingHorizontal: spacing.sm, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <View style={{ minHeight: 54, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         {item.dominant_color ? (
           <View
             style={{
@@ -199,7 +206,7 @@ function ClothingCard({ item, onLongPress }: { item: Clothing; onLongPress: () =
             }}
           />
         ) : null}
-        <Text style={[typography.small, { color: colors.text }]}>
+        <Text numberOfLines={1} style={[typography.bodyStrong, { color: colors.text, flex: 1 }]}>
           {t(categoryKey(item.category))}
         </Text>
       </View>

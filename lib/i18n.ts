@@ -52,7 +52,9 @@ const en: Dict = {
   'tabs.profile': 'Profile',
 
   'outfitDay.title': 'Today’s fit',
-  'outfitDay.subtitle': 'Build it, turn it, make it yours.',
+  'outfitDay.subtitle': 'Build it, refine it, make it yours.',
+  'outfitDay.studioLabel': 'LOOK BUILDER',
+  'outfitDay.studioHint': 'Change each piece',
   'outfitDay.validate': 'Wear it',
   'outfitDay.skip': 'Shuffle',
   'outfitDay.validated': 'Outfit saved for today',
@@ -175,7 +177,9 @@ const fr: Dict = {
   'tabs.profile': 'Profil',
 
   'outfitDay.title': 'Le fit du jour',
-  'outfitDay.subtitle': 'Compose-le, tourne-le, fais-en le tien.',
+  'outfitDay.subtitle': 'Compose-le, ajuste-le, fais-en le tien.',
+  'outfitDay.studioLabel': 'COMPOSEUR',
+  'outfitDay.studioHint': 'Change chaque pièce',
   'outfitDay.validate': 'Je la porte',
   'outfitDay.skip': 'Mélanger',
   'outfitDay.validated': 'Tenue enregistrée pour aujourd’hui',
