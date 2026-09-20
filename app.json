@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.wardrobe.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Wardrobe needs your camera to photograph you and your clothes.",
-        "NSPhotoLibraryUsageDescription": "Wardrobe needs access to your photos to add clothing items."
+        "NSPhotoLibraryUsageDescription": "Wardrobe needs access to your photos to add clothing items.",
+        "NSLocationWhenInUseUsageDescription": "Wardrobe uses your location to fetch local weather for outfit suggestions."
       }
     },
     "android": {
@@ -20,7 +21,9 @@
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -41,7 +44,13 @@
           "photosPermission": "Wardrobe needs access to your photos to add clothing items."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Wardrobe uses your location to fetch local weather for outfit suggestions."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
