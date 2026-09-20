@@ -101,6 +101,7 @@ const en: Dict = {
   'wardrobe.all': 'All',
   'wardrobe.deleteTitle': 'Delete this item?',
   'wardrobe.deleteBody': 'This cannot be undone.',
+  'wardrobe.removeBg': 'Remove background',
   'common.delete': 'Delete',
 
   'add.title': 'Add an item',
@@ -111,6 +112,7 @@ const en: Dict = {
   'add.save': 'Add to my wardrobe',
   'add.failed': 'Failed',
   'add.failedMsg': 'Could not add the item.',
+  'add.processing': 'Removing background…',
 
   'outfit.skip': 'Skip',
   'outfit.like': 'Like',
@@ -226,6 +228,7 @@ const fr: Dict = {
   'wardrobe.all': 'Tout',
   'wardrobe.deleteTitle': 'Supprimer cette pièce ?',
   'wardrobe.deleteBody': 'Action irréversible.',
+  'wardrobe.removeBg': 'Détourer (enlever le fond)',
   'common.delete': 'Supprimer',
 
   'add.title': 'Ajouter une pièce',
@@ -236,6 +239,7 @@ const fr: Dict = {
   'add.save': 'Ajouter à ma garde-robe',
   'add.failed': 'Échec',
   'add.failedMsg': 'Impossible d’ajouter la pièce.',
+  'add.processing': 'Détourage en cours…',
 
   'outfit.skip': 'Passer',
   'outfit.like': "J'aime",

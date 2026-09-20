@@ -37,3 +37,24 @@ export async function deleteClothing(id: string): Promise<void> {
   const { error } = await supabase.from('clothes').delete().eq('id', id);
   if (error) throw error;
 }
+
+/** Removes the background of a clothing photo (remove.bg edge function). */
+export async function removeBackground(
+  clothingId: string
+): Promise<{ url?: string; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('remove-background', {
+    body: { clothingId },
+  });
+  if (error) {
+    let detail = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) detail = body.error;
+    } catch {
+      // keep generic
+    }
+    return { error: detail };
+  }
+  if (data?.error) return { error: data.error };
+  return { url: data?.url as string };
+}

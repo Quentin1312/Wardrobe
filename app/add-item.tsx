@@ -11,7 +11,7 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { addClothing } from '@/lib/clothes';
+import { addClothing, removeBackground } from '@/lib/clothes';
 import type { ClothingCategory } from '@/lib/types';
 import { uploadImage } from '@/lib/upload';
 
@@ -23,6 +23,7 @@ export default function AddItem() {
   const [asset, setAsset] = useState<ImagePickerAsset | null>(null);
   const [category, setCategory] = useState<ClothingCategory | null>(null);
   const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   async function onSave() {
     if (!session?.user || !asset || !category) return;
@@ -31,12 +32,16 @@ export default function AddItem() {
       const userId = session.user.id;
       const path = `${userId}/${Date.now()}.jpg`;
       const url = await uploadImage('clothes', path, asset);
-      await addClothing({ userId, photoUrl: url, category });
+      const clothing = await addClothing({ userId, photoUrl: url, category });
+      // Remove the background so the piece renders cleanly on the mannequin.
+      setProcessing(true);
+      await removeBackground(clothing.id); // best-effort; item is saved regardless
       router.back();
     } catch (e: any) {
       Alert.alert(t('add.failed'), e.message ?? t('add.failedMsg'));
     } finally {
       setSaving(false);
+      setProcessing(false);
     }
   }
 
@@ -138,7 +143,7 @@ export default function AddItem() {
         </View>
 
         <Button
-          label={t('add.save')}
+          label={processing ? t('add.processing') : t('add.save')}
           onPress={onSave}
           loading={saving}
           disabled={!asset || !category}

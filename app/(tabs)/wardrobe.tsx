@@ -18,7 +18,7 @@ import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { deleteClothing, fetchClothes } from '@/lib/clothes';
+import { deleteClothing, fetchClothes, removeBackground } from '@/lib/clothes';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
 export default function Wardrobe() {
@@ -29,6 +29,7 @@ export default function Wardrobe() {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ClothingCategory | 'all'>('all');
 
   const load = useCallback(async () => {
@@ -48,9 +49,18 @@ export default function Wardrobe() {
     }, [load])
   );
 
-  async function onDelete(item: Clothing) {
-    Alert.alert(t('wardrobe.deleteTitle'), t('wardrobe.deleteBody'), [
-      { text: t('common.cancel'), style: 'cancel' },
+  async function onItemMenu(item: Clothing) {
+    Alert.alert(t('category.' + (item.category ?? 'other')), undefined, [
+      {
+        text: t('wardrobe.removeBg'),
+        onPress: async () => {
+          setBusyId(item.id);
+          const res = await removeBackground(item.id);
+          setBusyId(null);
+          if (res.error) Alert.alert(t('common.error'), res.error);
+          else load();
+        },
+      },
       {
         text: t('common.delete'),
         style: 'destructive',
@@ -63,6 +73,7 @@ export default function Wardrobe() {
           }
         },
       },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   }
 
@@ -121,7 +132,9 @@ export default function Wardrobe() {
           contentContainerStyle={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm, paddingBottom: 128 }}
           columnWrapperStyle={{ gap: spacing.md, justifyContent: 'flex-start' }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-          renderItem={({ item }) => <ClothingCard item={item} onLongPress={() => onDelete(item)} />}
+          renderItem={({ item }) => (
+            <ClothingCard item={item} busy={busyId === item.id} onLongPress={() => onItemMenu(item)} />
+          )}
         />
       )}
 
@@ -172,7 +185,15 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
   );
 }
 
-function ClothingCard({ item, onLongPress }: { item: Clothing; onLongPress: () => void }) {
+function ClothingCard({
+  item,
+  onLongPress,
+  busy,
+}: {
+  item: Clothing;
+  onLongPress: () => void;
+  busy?: boolean;
+}) {
   const { colors } = useTheme();
   const { t } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
@@ -192,6 +213,19 @@ function ClothingCard({ item, onLongPress }: { item: Clothing; onLongPress: () =
     >
       <View style={{ backgroundColor: '#F1F1EC', padding: spacing.sm }}>
         <Image source={{ uri }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="contain" />
+        {busy ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255,255,255,0.6)',
+            }}
+          >
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : null}
       </View>
       <View style={{ minHeight: 54, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         {item.dominant_color ? (
