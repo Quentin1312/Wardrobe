@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { OutfitStudio } from '@/components/OutfitStudio';
+import { StylistLoader } from '@/components/StylistLoader';
 import { TryOnSheet } from '@/components/TryOnSheet';
 import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -12,7 +13,7 @@ import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
 import { fetchClothes } from '@/lib/clothes';
-import { saveWornOutfit } from '@/lib/outfits';
+import { generateOutfits, saveWornOutfit } from '@/lib/outfits';
 import { generateTryOn } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { weatherContext } from '@/lib/weather';
@@ -42,6 +43,9 @@ export default function OutfitDay() {
   const [saved, setSaved] = useState(false);
   const [savedOutfitId, setSavedOutfitId] = useState<string | null>(null);
   const [tryOnOpen, setTryOnOpen] = useState(false);
+  const [styling, setStyling] = useState(false);
+  const [styleMsg, setStyleMsg] = useState<string | null>(null);
+  const [styled, setStyled] = useState(false);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -108,6 +112,45 @@ export default function OutfitDay() {
       shoes: pick('shoes'),
       jacket: pick('jacket', true),
     }));
+  }
+
+  /** Points each slot at the garments the stylist picked. */
+  function applyOutfitIds(ids: string[]) {
+    setIdx((previous) => {
+      const next: Indices = { ...previous, jacket: -1 };
+      for (const id of ids) {
+        for (const category of Object.keys(buckets) as ClothingCategory[]) {
+          const position = buckets[category].findIndex((piece) => piece.id === id);
+          if (position >= 0) next[category] = position;
+        }
+      }
+      return next;
+    });
+  }
+
+  /** Ask the AI stylist for a weather-aware look. */
+  async function styleMe() {
+    resetSavedState();
+    setStyleMsg(null);
+    setStyling(true);
+    try {
+      const w = weather ? { temp: weather.temp, condition: weather.condition } : null;
+      const { outfits, error } = await generateOutfits(w);
+      if (error === 'not_enough_items') {
+        setStyleMsg(t('today.tooFewBody'));
+      } else if (error === 'empty' || error === 'no_valid_outfit') {
+        setStyleMsg(t('today.noOutfitBody'));
+      } else if (error) {
+        setStyleMsg(error);
+      } else if (outfits.length > 0) {
+        applyOutfitIds(outfits[0].clothes_ids);
+        setStyled(true);
+      }
+    } catch (e: any) {
+      setStyleMsg(e?.message ?? t('common.error'));
+    } finally {
+      setStyling(false);
+    }
   }
 
   async function persistCurrentOutfit() {
@@ -201,6 +244,48 @@ export default function OutfitDay() {
           ) : null}
 
           <View style={{ gap: spacing.sm }}>
+            {/* Primary: let the stylist decide, based on the weather */}
+            <Pressable
+              onPress={styleMe}
+              style={({ pressed }) => ({
+                minHeight: 64,
+                borderRadius: radius.full,
+                backgroundColor: pressed ? colors.accentSoft : colors.energy,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: spacing.sm,
+                ...shadows.floating(dark),
+              })}
+            >
+              <Ionicons name="color-wand-outline" size={22} color={colors.energyText} />
+              <Text style={[typography.button, { color: colors.energyText, fontSize: 17 }]}>
+                {styled ? t('outfitDay.aiRetry') : t('outfitDay.aiCta')}
+              </Text>
+            </Pressable>
+
+            {styleMsg ? (
+              <Pressable
+                onPress={() => setStyleMsg(null)}
+                style={{
+                  flexDirection: 'row',
+                  gap: spacing.sm,
+                  padding: spacing.md,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: colors.accent,
+                  backgroundColor: colors.accentSoft,
+                }}
+              >
+                <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
+                <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{styleMsg}</Text>
+              </Pressable>
+            ) : null}
+
+            <Text style={[typography.caption, { color: colors.textMuted, textAlign: 'center' }]}>
+              {t('outfitDay.manual')}
+            </Text>
+
             <Pressable
               onPress={() => setTryOnOpen(true)}
               style={({ pressed }) => ({
@@ -259,6 +344,8 @@ export default function OutfitDay() {
           </View>
         </ScrollView>
       )}
+
+      <StylistLoader visible={styling} />
 
       <TryOnSheet
         visible={tryOnOpen}

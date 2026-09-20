@@ -2,16 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { CATEGORIES, categoryKey } from '@/constants/categories';
@@ -19,13 +10,7 @@ import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import {
-  deleteClothing,
-  fetchClothes,
-  removeBackground,
-  renameClothing,
-  setClothingFavorite,
-} from '@/lib/clothes';
+import { fetchClothes } from '@/lib/clothes';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
 type Filter = ClothingCategory | 'all' | 'fav';
@@ -39,12 +24,7 @@ export default function Wardrobe() {
 
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
-  const [renaming, setRenaming] = useState<Clothing | null>(null);
-  const [nameDraft, setNameDraft] = useState('');
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -59,58 +39,6 @@ export default function Wardrobe() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  async function onDetour(item: Clothing) {
-    setSelectedId(null);
-    setMsg(null);
-    setBusyId(item.id);
-    const res = await removeBackground(item.id);
-    setBusyId(null);
-    if (res.error) setMsg(res.error);
-    else load();
-  }
-
-  async function onToggleFavorite(item: Clothing) {
-    setSelectedId(null);
-    const next = !item.favorite;
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, favorite: next } : i)));
-    try {
-      await setClothingFavorite(item.id, next);
-    } catch {
-      load();
-    }
-  }
-
-  async function onDelete(item: Clothing) {
-    setSelectedId(null);
-    setItems((prev) => prev.filter((i) => i.id !== item.id));
-    try {
-      await deleteClothing(item.id);
-    } catch {
-      load();
-    }
-  }
-
-  function openRename(item: Clothing) {
-    setSelectedId(null);
-    setNameDraft(item.name ?? '');
-    setRenaming(item);
-  }
-
-  async function saveRename() {
-    if (!renaming) return;
-    const target = renaming;
-    const value = nameDraft;
-    setRenaming(null);
-    setItems((prev) =>
-      prev.map((i) => (i.id === target.id ? { ...i, name: value.trim() || null } : i))
-    );
-    try {
-      await renameClothing(target.id, value);
-    } catch {
-      load();
-    }
-  }
-
   const usedCategories = useMemo(
     () => CATEGORIES.filter((c) => items.some((i) => i.category === c.key)),
     [items]
@@ -124,7 +52,7 @@ export default function Wardrobe() {
         ? items.filter((i) => i.favorite)
         : items.filter((i) => i.category === filter);
 
-  // Keep the FAB clear of the floating tab bar.
+  // Keep the add button clear of the floating tab bar.
   const fabBottom = (insets.bottom > 0 ? insets.bottom : 14) + 62 + 16;
 
   return (
@@ -163,25 +91,6 @@ export default function Wardrobe() {
                 {t('wardrobe.count', { count: items.length })}
               </Text>
 
-              {msg ? (
-                <Pressable
-                  onPress={() => setMsg(null)}
-                  style={{
-                    flexDirection: 'row',
-                    gap: spacing.sm,
-                    marginTop: spacing.sm,
-                    padding: spacing.md,
-                    borderRadius: radius.md,
-                    borderWidth: 1,
-                    borderColor: colors.accent,
-                    backgroundColor: colors.accentSoft,
-                  }}
-                >
-                  <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
-                  <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{msg}</Text>
-                </Pressable>
-              ) : null}
-
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -209,17 +118,7 @@ export default function Wardrobe() {
             </View>
           }
           renderItem={({ item }) => (
-            <ClothingCard
-              item={item}
-              busy={busyId === item.id}
-              selected={selectedId === item.id}
-              onLongPress={() => setSelectedId(item.id)}
-              onDismiss={() => setSelectedId(null)}
-              onDetour={() => onDetour(item)}
-              onDelete={() => onDelete(item)}
-              onRename={() => openRename(item)}
-              onToggleFavorite={() => onToggleFavorite(item)}
-            />
+            <ClothingCard item={item} onPress={() => router.push(`/item/${item.id}`)} />
           )}
         />
       )}
@@ -234,69 +133,15 @@ export default function Wardrobe() {
           width: 58,
           height: 58,
           borderRadius: 29,
-          backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+          backgroundColor: colors.energy,
           alignItems: 'center',
           justifyContent: 'center',
+          transform: [{ rotate: '-8deg' }, { scale: pressed ? 0.94 : 1 }],
           ...shadows.floating(dark),
         })}
       >
-        <Ionicons name="add" size={30} color={colors.primaryText} />
+        <Ionicons name="add" size={30} color={colors.energyText} />
       </Pressable>
-
-      {/* Rename dialog */}
-      <Modal visible={!!renaming} transparent animationType="fade" onRequestClose={() => setRenaming(null)}>
-        <Pressable
-          onPress={() => setRenaming(null)}
-          style={{ flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={{
-              width: '100%',
-              maxWidth: 420,
-              backgroundColor: colors.surface,
-              borderRadius: radius.lg,
-              padding: spacing.lg,
-              gap: spacing.md,
-            }}
-          >
-            <Text style={[typography.h3, { color: colors.text }]}>{t('wardrobe.rename')}</Text>
-            <TextInput
-              value={nameDraft}
-              onChangeText={setNameDraft}
-              placeholder={t('wardrobe.namePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              autoFocus
-              style={[
-                typography.body,
-                {
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: radius.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: 12,
-                  color: colors.text,
-                  backgroundColor: colors.surfaceAlt,
-                },
-              ]}
-            />
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <Pressable
-                onPress={() => setRenaming(null)}
-                style={{ flex: 1, paddingVertical: 13, borderRadius: radius.full, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center' }}
-              >
-                <Text style={[typography.button, { color: colors.text }]}>{t('common.cancel')}</Text>
-              </Pressable>
-              <Pressable
-                onPress={saveRename}
-                style={{ flex: 1, paddingVertical: 13, borderRadius: radius.full, backgroundColor: colors.accent, alignItems: 'center' }}
-              >
-                <Text style={[typography.button, { color: colors.accentText }]}>{t('common.save')}</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -338,44 +183,23 @@ function Chip({
   );
 }
 
-function ClothingCard({
-  item,
-  onLongPress,
-  onDismiss,
-  onDetour,
-  onDelete,
-  onRename,
-  onToggleFavorite,
-  busy,
-  selected,
-}: {
-  item: Clothing;
-  onLongPress: () => void;
-  onDismiss: () => void;
-  onDetour: () => void;
-  onDelete: () => void;
-  onRename: () => void;
-  onToggleFavorite: () => void;
-  busy?: boolean;
-  selected?: boolean;
-}) {
+function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }) {
   const { colors } = useTheme();
   const { t } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
 
   return (
     <Pressable
-      onPress={selected ? onDismiss : undefined}
-      onLongPress={onLongPress}
-      delayLongPress={300}
-      style={{
+      onPress={onPress}
+      style={({ pressed }) => ({
         flex: 1,
         backgroundColor: colors.surface,
         borderRadius: radius.lg,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: selected ? colors.accent : colors.border,
-      }}
+        borderColor: colors.border,
+        opacity: pressed ? 0.85 : 1,
+      })}
     >
       <View style={{ backgroundColor: '#EFEEE9', padding: spacing.sm }}>
         <Image
@@ -385,8 +209,7 @@ function ClothingCard({
           transition={180}
           cachePolicy="memory-disk"
         />
-
-        {item.favorite && !selected ? (
+        {item.favorite ? (
           <View
             style={{
               position: 'absolute',
@@ -403,43 +226,6 @@ function ClothingCard({
             <Ionicons name="heart" size={14} color={colors.energy} />
           </View>
         ) : null}
-
-        {busy ? (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(255,255,255,0.65)',
-            }}
-          >
-            <ActivityIndicator color={colors.primary} />
-          </View>
-        ) : null}
-
-        {selected && !busy ? (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 7,
-              padding: 6,
-              backgroundColor: 'rgba(20,17,13,0.8)',
-            }}
-          >
-            <MenuButton icon="pencil" label={t('wardrobe.rename')} onPress={onRename} />
-            <MenuButton
-              icon={item.favorite ? 'heart-dislike' : 'heart'}
-              label={item.favorite ? t('wardrobe.unfavorite') : t('wardrobe.favorite')}
-              onPress={onToggleFavorite}
-            />
-            <MenuButton icon="cut-outline" label={t('wardrobe.removeBg')} onPress={onDetour} />
-            <MenuButton icon="trash-outline" label={t('common.delete')} onPress={onDelete} danger />
-          </View>
-        ) : null}
       </View>
 
       <View style={{ minHeight: 52, paddingHorizontal: 11, paddingVertical: 9, gap: 2 }}>
@@ -450,38 +236,6 @@ function ClothingCard({
           {t(categoryKey(item.category))}
         </Text>
       </View>
-    </Pressable>
-  );
-}
-
-function MenuButton({
-  icon,
-  label,
-  onPress,
-  danger,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingVertical: 7,
-        paddingHorizontal: 11,
-        borderRadius: radius.full,
-        backgroundColor: danger ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.14)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.22)',
-      }}
-    >
-      <Ionicons name={icon} size={13} color="#FFFFFF" />
-      <Text style={[typography.caption, { color: '#FFFFFF', fontSize: 10 }]}>{label}</Text>
     </Pressable>
   );
 }

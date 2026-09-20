@@ -92,6 +92,21 @@ const en: Dict = {
   'today.lookBody': 'Pick each piece and save the look you will wear today.',
   'today.lookCta': 'Open the fitting room',
 
+  'outfitDay.aiCta': 'Style my outfit',
+  'outfitDay.aiRetry': 'New suggestion',
+  'outfitDay.manual': 'Or change any piece yourself',
+  'stylist.title': 'Your stylist is working',
+  'stylist.step1': 'Reading the weather…',
+  'stylist.step2': 'Going through your wardrobe…',
+  'stylist.step3': 'Matching colours…',
+  'stylist.step4': 'Checking the trends…',
+  'stylist.step5': 'Putting the look together…',
+
+  'item.title': 'Item',
+  'item.name': 'Name',
+  'item.category': 'Category',
+  'item.addedOn': 'Added on',
+
   'wardrobe.rename': 'Rename',
   'wardrobe.favorite': 'Favourite',
   'wardrobe.unfavorite': 'Remove favourite',
@@ -230,6 +245,21 @@ const fr: Dict = {
   'today.lookTitle': 'Compose ta tenue',
   'today.lookBody': 'Choisis chaque pièce et enregistre la tenue que tu portes aujourd’hui.',
   'today.lookCta': 'Ouvrir le dressing',
+
+  'outfitDay.aiCta': 'Faire ma tenue',
+  'outfitDay.aiRetry': 'Autre proposition',
+  'outfitDay.manual': 'Ou change chaque pièce toi-même',
+  'stylist.title': 'Ton styliste travaille',
+  'stylist.step1': 'Lecture de la météo…',
+  'stylist.step2': 'Analyse de ta garde-robe…',
+  'stylist.step3': 'Accord des couleurs…',
+  'stylist.step4': 'Vérification des tendances…',
+  'stylist.step5': 'Composition de la tenue…',
+
+  'item.title': 'Pièce',
+  'item.name': 'Nom',
+  'item.category': 'Catégorie',
+  'item.addedOn': 'Ajouté le',
 
   'wardrobe.rename': 'Renommer',
   'wardrobe.favorite': 'Favori',

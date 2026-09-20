@@ -20,8 +20,10 @@ export default function TabsLayout() {
         tabBarActiveTintColor: dark ? colors.energy : colors.text,
         tabBarInactiveTintColor: colors.chromeMuted,
         tabBarHideOnKeyboard: true,
-        tabBarLabelStyle: { fontFamily: fonts.sansSemi, fontSize: 10, marginTop: 1 },
-        tabBarItemStyle: { paddingTop: 6 },
+        // Symmetric padding keeps icon + label optically centred in the bubble.
+        tabBarLabelStyle: { fontFamily: fonts.sansSemi, fontSize: 10, marginTop: 0, marginBottom: 0 },
+        tabBarIconStyle: { marginTop: 0 },
+        tabBarItemStyle: { paddingTop: 8, paddingBottom: 8, justifyContent: 'center' },
         // Floating "bubble" bar, lifted off the bottom edge.
         tabBarStyle: {
           position: 'absolute',

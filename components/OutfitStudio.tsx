@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, Text, View } from 'react-native';
 import { categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
@@ -14,18 +15,20 @@ interface OutfitStudioProps {
   onNext: (category: ClothingCategory) => void;
 }
 
-// Stacked top-to-bottom like a look, each piece in its own generous row.
+// Worn order reads top-to-bottom; the jacket sits last as an extra layer
+// rather than floating above the head.
 const ROWS: { category: ClothingCategory; height: number }[] = [
-  { category: 'jacket', height: 148 },
-  { category: 'top', height: 156 },
-  { category: 'bottom', height: 176 },
+  { category: 'top', height: 158 },
+  { category: 'bottom', height: 178 },
   { category: 'shoes', height: 104 },
+  { category: 'jacket', height: 148 },
 ];
 
-// Light studio stage so both dark and light garments read well.
-const STAGE = '#EFEEE9';
-const STAGE_LINE = 'rgba(21,21,23,0.07)';
-const INK_MUTED = '#8A8A84';
+// Soft studio gradient — neutral, never a flat white sheet.
+const STAGE_TOP = '#EDEBE5';
+const STAGE_BOTTOM = '#D6D3CB';
+const STAGE_LINE = 'rgba(21,21,23,0.08)';
+const INK_MUTED = '#7E7C76';
 
 export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStudioProps) {
   const { t } = useLocale();
@@ -33,10 +36,12 @@ export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStud
   const rows = ROWS.filter((row) => counts[row.category] > 0);
 
   return (
-    <View
+    <LinearGradient
+      colors={[STAGE_TOP, STAGE_BOTTOM]}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
       style={{
         borderRadius: 28,
-        backgroundColor: STAGE,
         overflow: 'hidden',
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.sm,
@@ -68,7 +73,7 @@ export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStud
           marginTop: spacing.xs,
         }}
       />
-    </View>
+    </LinearGradient>
   );
 }
 

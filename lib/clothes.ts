@@ -33,6 +33,16 @@ export async function addClothing(input: {
   return data as Clothing;
 }
 
+export async function fetchClothing(id: string): Promise<Clothing | null> {
+  const { data, error } = await supabase
+    .from('clothes')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Clothing) ?? null;
+}
+
 export async function renameClothing(id: string, name: string): Promise<void> {
   const { error } = await supabase
     .from('clothes')
