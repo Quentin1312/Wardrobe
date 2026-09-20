@@ -228,7 +228,7 @@ const fr: Dict = {
   'wardrobe.all': 'Tout',
   'wardrobe.deleteTitle': 'Supprimer cette pièce ?',
   'wardrobe.deleteBody': 'Action irréversible.',
-  'wardrobe.removeBg': 'Détourer (enlever le fond)',
+  'wardrobe.removeBg': 'Détourer',
   'common.delete': 'Supprimer',
 
   'add.title': 'Ajouter une pièce',

@@ -30,6 +30,8 @@ export default function Wardrobe() {
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<ClothingCategory | 'all'>('all');
 
   const load = useCallback(async () => {
@@ -49,32 +51,24 @@ export default function Wardrobe() {
     }, [load])
   );
 
-  async function onItemMenu(item: Clothing) {
-    Alert.alert(t('category.' + (item.category ?? 'other')), undefined, [
-      {
-        text: t('wardrobe.removeBg'),
-        onPress: async () => {
-          setBusyId(item.id);
-          const res = await removeBackground(item.id);
-          setBusyId(null);
-          if (res.error) Alert.alert(t('common.error'), res.error);
-          else load();
-        },
-      },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          setItems((prev) => prev.filter((i) => i.id !== item.id));
-          try {
-            await deleteClothing(item.id);
-          } catch {
-            load();
-          }
-        },
-      },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+  async function onDetour(item: Clothing) {
+    setSelectedId(null);
+    setMsg(null);
+    setBusyId(item.id);
+    const res = await removeBackground(item.id);
+    setBusyId(null);
+    if (res.error) setMsg(res.error);
+    else load();
+  }
+
+  async function onDelete(item: Clothing) {
+    setSelectedId(null);
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    try {
+      await deleteClothing(item.id);
+    } catch {
+      load();
+    }
   }
 
   // Categories that actually have items, in canonical order.
@@ -92,6 +86,24 @@ export default function Wardrobe() {
         <Text style={[typography.small, { color: colors.textMuted }]}>
           {items.length > 0 ? t('wardrobe.count', { count: items.length }) : t('wardrobe.subtitle')}
         </Text>
+        {msg ? (
+          <Pressable
+            onPress={() => setMsg(null)}
+            style={{
+              flexDirection: 'row',
+              gap: spacing.sm,
+              marginTop: spacing.sm,
+              padding: spacing.md,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: colors.accent,
+              backgroundColor: colors.accentSoft,
+            }}
+          >
+            <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
+            <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{msg}</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {items.length > 0 ? (
@@ -133,7 +145,15 @@ export default function Wardrobe() {
           columnWrapperStyle={{ gap: spacing.md, justifyContent: 'flex-start' }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           renderItem={({ item }) => (
-            <ClothingCard item={item} busy={busyId === item.id} onLongPress={() => onItemMenu(item)} />
+            <ClothingCard
+              item={item}
+              busy={busyId === item.id}
+              selected={selectedId === item.id}
+              onLongPress={() => setSelectedId(item.id)}
+              onDismiss={() => setSelectedId(null)}
+              onDetour={() => onDetour(item)}
+              onDelete={() => onDelete(item)}
+            />
           )}
         />
       )}
@@ -188,19 +208,28 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
 function ClothingCard({
   item,
   onLongPress,
+  onDismiss,
+  onDetour,
+  onDelete,
   busy,
+  selected,
 }: {
   item: Clothing;
   onLongPress: () => void;
+  onDismiss: () => void;
+  onDetour: () => void;
+  onDelete: () => void;
   busy?: boolean;
+  selected?: boolean;
 }) {
   const { colors } = useTheme();
   const { t } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
   return (
     <Pressable
+      onPress={selected ? onDismiss : undefined}
       onLongPress={onLongPress}
-      delayLongPress={350}
+      delayLongPress={300}
       style={{
         width: '47.5%',
         flexGrow: 0,
@@ -208,7 +237,7 @@ function ClothingCard({
         borderRadius: radius.lg,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: selected ? colors.primary : colors.border,
       }}
     >
       <View style={{ backgroundColor: '#F1F1EC', padding: spacing.sm }}>
@@ -224,6 +253,34 @@ function ClothingCard({
             }}
           >
             <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : null}
+        {selected && !busy ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: spacing.sm,
+              padding: spacing.sm,
+              backgroundColor: 'rgba(20,17,13,0.72)',
+            }}
+          >
+            <Pressable
+              onPress={onDetour}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: spacing.md, borderRadius: radius.full, backgroundColor: colors.primary }}
+            >
+              <Ionicons name="cut-outline" size={16} color={colors.primaryText} />
+              <Text style={[typography.caption, { color: colors.primaryText }]}>{t('wardrobe.removeBg')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDelete}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1, borderColor: '#FFFFFF55' }}
+            >
+              <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+              <Text style={[typography.caption, { color: '#FFFFFF' }]}>{t('common.delete')}</Text>
+            </Pressable>
           </View>
         ) : null}
       </View>
