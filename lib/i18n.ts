@@ -102,6 +102,11 @@ const en: Dict = {
   'stylist.step4': 'Checking the trends…',
   'stylist.step5': 'Putting the look together…',
 
+  'outfitDay.confirmedTitle': "Today's look is locked in",
+  'outfitDay.confirmedBody': 'These pieces are now marked as worn in your wardrobe.',
+  'outfitDay.confirmedCta': 'Have a good day',
+  'outfitDay.wornToday': 'Worn today',
+
   'laundry.dirty': 'Laundry',
   'laundry.markDirty': 'Send to laundry',
   'laundry.markClean': 'Mark as clean',
@@ -267,6 +272,11 @@ const fr: Dict = {
   'stylist.step3': 'Accord des couleurs…',
   'stylist.step4': 'Vérification des tendances…',
   'stylist.step5': 'Composition de la tenue…',
+
+  'outfitDay.confirmedTitle': 'Ta tenue du jour est validée',
+  'outfitDay.confirmedBody': 'Ces pièces sont marquées comme portées dans ta garde-robe.',
+  'outfitDay.confirmedCta': 'Bonne journée',
+  'outfitDay.wornToday': 'Portée aujourd’hui',
 
   'laundry.dirty': 'Linge sale',
   'laundry.markDirty': 'Mettre au sale',

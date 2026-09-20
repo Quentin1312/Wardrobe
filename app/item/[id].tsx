@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LaundryDrop } from '@/components/LaundryDrop';
 import { categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
@@ -37,6 +38,7 @@ export default function ItemSheet() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [nameSaved, setNameSaved] = useState(false);
+  const [showBasket, setShowBasket] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -80,6 +82,8 @@ export default function ItemSheet() {
     if (!item) return;
     const next = !item.dirty;
     setItem({ ...item, dirty: next });
+    // Only the "into the basket" direction gets the animation.
+    if (next) setShowBasket(true);
     try {
       await setClothingDirty(item.id, next);
     } catch {
@@ -275,6 +279,12 @@ export default function ItemSheet() {
           <ActionRow icon="trash-outline" label={t('common.delete')} onPress={onDelete} danger />
         </View>
       </ScrollView>
+
+      <LaundryDrop
+        visible={showBasket}
+        items={item ? [item] : []}
+        onDone={() => setShowBasket(false)}
+      />
     </SafeAreaView>
   );
 }

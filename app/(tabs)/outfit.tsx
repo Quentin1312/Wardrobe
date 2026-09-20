@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
-import { LaundryDrop } from '@/components/LaundryDrop';
+import { OutfitConfirmed } from '@/components/OutfitConfirmed';
 import { fetchClothes, markOutfitDirty } from '@/lib/clothes';
 import { generateOutfits, saveWornOutfit } from '@/lib/outfits';
 import { generateTryOn } from '@/lib/tryon';
@@ -47,8 +47,8 @@ export default function OutfitDay() {
   const [styling, setStyling] = useState(false);
   const [styleMsg, setStyleMsg] = useState<string | null>(null);
   const [styled, setStyled] = useState(false);
-  const [showBasket, setShowBasket] = useState(false);
-  const [basketItems, setBasketItems] = useState<Clothing[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmedItems, setConfirmedItems] = useState<Clothing[]>([]);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -179,14 +179,15 @@ export default function OutfitDay() {
     await persistCurrentOutfit();
     setSaved(true);
 
-    // Worn today → straight into the laundry basket.
+    // Worn today: quietly flag the pieces in the wardrobe. They only reach the
+    // laundry basket view — no basket animation here, this is a validation.
     try {
       await markOutfitDirty(worn.map((piece) => piece.id));
     } catch {
       // the look is saved either way
     }
-    setBasketItems(worn);
-    setShowBasket(true);
+    setConfirmedItems(worn);
+    setShowConfirm(true);
   }
 
   async function runTryOn() {
@@ -257,7 +258,7 @@ export default function OutfitDay() {
           {saved ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="checkmark-circle" size={21} color={colors.success} />
-              <Text style={[typography.bodyStrong, { color: colors.success }]}>{t('outfitDay.validated')}</Text>
+              <Text style={[typography.bodyStrong, { color: colors.success }]}>{t('outfitDay.wornToday')}</Text>
             </View>
           ) : null}
 
@@ -365,14 +366,11 @@ export default function OutfitDay() {
 
       <StylistLoader visible={styling} />
 
-      <LaundryDrop
-        visible={showBasket}
-        items={basketItems}
-        onDone={() => {
-          setShowBasket(false);
-          setBasketItems([]);
-          load();
-        }}
+      {/* Keep the look on screen after validating — no reload. */}
+      <OutfitConfirmed
+        visible={showConfirm}
+        items={confirmedItems}
+        onClose={() => setShowConfirm(false)}
       />
 
       <TryOnSheet
