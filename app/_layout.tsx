@@ -16,12 +16,13 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LocaleProvider, useLocale } from '@/context/LocaleContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { colors } from '@/constants/theme';
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
   const { chosen, ready } = useLocale();
+  const { colors: themeColors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
@@ -53,14 +54,19 @@ function RootNavigator() {
 
   if (loading || !ready) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator color={colors.primary} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: themeColors.bg }}>
+        <ActivityIndicator color={themeColors.primary} />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: themeColors.bg },
+      }}
+    >
       <Stack.Screen name="select-language" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />

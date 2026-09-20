@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -50,6 +49,7 @@ export default function Today() {
   const [outfits, setOutfits] = useState<SuggestedOutfit[]>([]);
   const [clothes, setClothes] = useState<Map<string, Clothing>>(new Map());
   const [generating, setGenerating] = useState(false);
+  const [genMessage, setGenMessage] = useState<string | null>(null);
 
   const weather = state.status === 'ready' ? state.weather : null;
 
@@ -72,22 +72,24 @@ export default function Today() {
   const onGenerate = useCallback(async () => {
     if (!session?.user) return;
     setGenerating(true);
+    setGenMessage(null);
     try {
       const map = await clothesMap(session.user.id);
       setClothes(map);
       const w = weather ? { temp: weather.temp, condition: weather.condition } : null;
       const { outfits: fresh, error } = await generateOutfits(w);
       if (error === 'not_enough_items') {
-        Alert.alert(t('today.tooFewTitle'), t('today.tooFewBody'));
+        setGenMessage(t('today.tooFewBody'));
       } else if (error === 'empty' || error === 'no_valid_outfit') {
-        Alert.alert(t('today.noOutfitTitle'), t('today.noOutfitBody'));
+        setGenMessage(t('today.noOutfitBody'));
       } else if (error) {
-        Alert.alert(t('common.error'), error);
+        // Show the raw error so the real cause is visible (works on web too).
+        setGenMessage(error);
       } else {
         setOutfits((prev) => [...fresh, ...prev]);
       }
     } catch (e: any) {
-      Alert.alert(t('common.error'), e.message ?? 'Generation failed.');
+      setGenMessage(e?.message ?? 'Generation failed.');
     } finally {
       setGenerating(false);
     }
@@ -167,6 +169,23 @@ export default function Today() {
               </Text>
             </Pressable>
           </View>
+
+          {genMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: spacing.sm,
+                padding: spacing.md,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: colors.accent,
+                backgroundColor: colors.accentSoft,
+              }}
+            >
+              <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
+              <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{genMessage}</Text>
+            </View>
+          ) : null}
 
           {outfits.length === 0 ? (
             <EmptySuggestions />
