@@ -3,16 +3,17 @@ import type { ClothingCategory } from '@/lib/types';
 
 export const CATEGORIES: {
   key: ClothingCategory;
-  label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { key: 'top', label: 'Top', icon: 'shirt-outline' },
-  { key: 'bottom', label: 'Bas', icon: 'walk-outline' },
-  { key: 'shoes', label: 'Chaussures', icon: 'footsteps-outline' },
-  { key: 'jacket', label: 'Veste', icon: 'body-outline' },
-  { key: 'accessory', label: 'Accessoire', icon: 'watch-outline' },
+  { key: 'top', icon: 'shirt-outline' },
+  { key: 'bottom', icon: 'walk-outline' },
+  { key: 'shoes', icon: 'footsteps-outline' },
+  { key: 'jacket', icon: 'body-outline' },
+  { key: 'accessory', icon: 'watch-outline' },
 ];
 
-export function categoryLabel(key: string | null): string {
-  return CATEGORIES.find((c) => c.key === key)?.label ?? 'Autre';
+/** i18n key for a category (falls back to category.other). */
+export function categoryKey(cat: string | null): string {
+  const known = CATEGORIES.some((c) => c.key === cat);
+  return known ? `category.${cat}` : 'category.other';
 }

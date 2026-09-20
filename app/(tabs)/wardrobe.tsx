@@ -11,14 +11,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
-import { categoryLabel } from '@/constants/categories';
+import { categoryKey } from '@/constants/categories';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { fetchClothes } from '@/lib/clothes';
 import type { Clothing } from '@/lib/types';
 
 export default function Wardrobe() {
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,9 +55,11 @@ export default function Wardrobe() {
         }}
       >
         <View>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>Wardrobe</Text>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
+            {t('wardrobe.title')}
+          </Text>
           <Text style={{ fontSize: 15, color: colors.textMuted }}>
-            {items.length > 0 ? `${items.length} pièce${items.length > 1 ? 's' : ''}` : 'Ta garde-robe'}
+            {items.length > 0 ? t('wardrobe.count', { count: items.length }) : t('wardrobe.subtitle')}
           </Text>
         </View>
       </View>
@@ -67,8 +71,8 @@ export default function Wardrobe() {
       ) : items.length === 0 ? (
         <EmptyState
           icon="shirt-outline"
-          title="Garde-robe vide"
-          subtitle="Photographie tes vêtements pour commencer."
+          title={t('wardrobe.emptyTitle')}
+          subtitle={t('wardrobe.emptyBody')}
         />
       ) : (
         <FlatList
@@ -110,6 +114,7 @@ export default function Wardrobe() {
 }
 
 function ClothingCard({ item }: { item: Clothing }) {
+  const { t } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
   return (
     <View
@@ -137,7 +142,7 @@ function ClothingCard({ item }: { item: Clothing }) {
           />
         ) : null}
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-          {categoryLabel(item.category)}
+          {t(categoryKey(item.category))}
         </Text>
       </View>
     </View>

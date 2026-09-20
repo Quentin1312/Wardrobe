@@ -50,7 +50,8 @@
         {
           "locationWhenInUsePermission": "Wardrobe uses your location to fetch local weather for outfit suggestions."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true

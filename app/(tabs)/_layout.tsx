@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { colors } from '@/constants/theme';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function TabsLayout() {
+  const { t } = useLocale();
   return (
     <Tabs
       screenOptions={{
@@ -18,7 +20,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
+          title: t('tabs.today'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="sparkles-outline" color={color} size={size} />
           ),
@@ -27,7 +29,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="wardrobe"
         options={{
-          title: 'Wardrobe',
+          title: t('tabs.wardrobe'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="shirt-outline" color={color} size={size} />
           ),
@@ -36,7 +38,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" color={color} size={size} />
           ),

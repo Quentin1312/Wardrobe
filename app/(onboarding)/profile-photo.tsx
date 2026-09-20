@@ -7,11 +7,13 @@ import { Button } from '@/components/ui';
 import { pickFromLibrary, takePhoto } from '@/components/PhotoPicker';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { supabase } from '@/lib/supabase';
 import { uploadImage } from '@/lib/upload';
 
 export default function ProfilePhoto() {
   const { session, refreshProfile } = useAuth();
+  const { t } = useLocale();
   const [asset, setAsset] = useState<ImagePickerAsset | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -35,7 +37,7 @@ export default function ProfilePhoto() {
       await refreshProfile();
       // Root auth gate routes to the tabs once onboarded flips true.
     } catch (e: any) {
-      Alert.alert('Upload failed', e.message ?? 'Could not save your photo.');
+      Alert.alert(t('onboarding.uploadFailed'), e.message ?? t('onboarding.uploadFailedMsg'));
     } finally {
       setSaving(false);
     }
@@ -46,11 +48,10 @@ export default function ProfilePhoto() {
       <View style={{ flex: 1, padding: spacing.lg, gap: spacing.lg }}>
         <View style={{ gap: spacing.xs, marginTop: spacing.lg }}>
           <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
-            Add a profile photo
+            {t('onboarding.photoTitle')}
           </Text>
           <Text style={{ fontSize: 16, color: colors.textMuted }}>
-            A clear portrait on a neutral background. We use it later to show you
-            wearing outfits.
+            {t('onboarding.photoSubtitle')}
           </Text>
         </View>
 
@@ -79,7 +80,7 @@ export default function ProfilePhoto() {
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <View style={{ flex: 1 }}>
             <Button
-              label="Take photo"
+              label={t('onboarding.takePhoto')}
               variant="ghost"
               onPress={async () => {
                 const a = await takePhoto();
@@ -89,7 +90,7 @@ export default function ProfilePhoto() {
           </View>
           <View style={{ flex: 1 }}>
             <Button
-              label="Choose"
+              label={t('onboarding.choose')}
               variant="ghost"
               onPress={async () => {
                 const a = await pickFromLibrary();
@@ -100,7 +101,7 @@ export default function ProfilePhoto() {
         </View>
 
         <Button
-          label="Save & continue"
+          label={t('onboarding.saveContinue')}
           onPress={onSave}
           loading={saving}
           disabled={!asset}

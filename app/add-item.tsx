@@ -9,12 +9,14 @@ import { Button } from '@/components/ui';
 import { CATEGORIES } from '@/constants/categories';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { addClothing } from '@/lib/clothes';
 import type { ClothingCategory } from '@/lib/types';
 import { uploadImage } from '@/lib/upload';
 
 export default function AddItem() {
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [asset, setAsset] = useState<ImagePickerAsset | null>(null);
   const [category, setCategory] = useState<ClothingCategory | null>(null);
@@ -30,7 +32,7 @@ export default function AddItem() {
       await addClothing({ userId, photoUrl: url, category });
       router.back();
     } catch (e: any) {
-      Alert.alert('Échec', e.message ?? 'Impossible d’ajouter la pièce.');
+      Alert.alert(t('add.failed'), e.message ?? t('add.failedMsg'));
     } finally {
       setSaving(false);
     }
@@ -49,7 +51,7 @@ export default function AddItem() {
         }}
       >
         <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text }}>
-          Ajouter une pièce
+          {t('add.title')}
         </Text>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={26} color={colors.textMuted} />
@@ -79,16 +81,14 @@ export default function AddItem() {
           ) : (
             <View style={{ alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
-              <Text style={{ color: colors.textMuted }}>Prendre une photo</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                À plat, fond clair, bonne lumière
-              </Text>
+              <Text style={{ color: colors.textMuted }}>{t('add.takePhoto')}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t('add.photoHint')}</Text>
             </View>
           )}
         </Pressable>
 
         <Button
-          label="Choisir depuis la galerie"
+          label={t('add.chooseGallery')}
           variant="ghost"
           onPress={async () => {
             const a = await pickFromLibrary();
@@ -99,7 +99,7 @@ export default function AddItem() {
         {/* Category picker */}
         <View style={{ gap: spacing.sm }}>
           <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '600' }}>
-            Catégorie
+            {t('add.category')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {CATEGORIES.map((c) => {
@@ -131,7 +131,7 @@ export default function AddItem() {
                       fontWeight: '600',
                     }}
                   >
-                    {c.label}
+                    {t(`category.${c.key}`)}
                   </Text>
                 </Pressable>
               );
@@ -140,7 +140,7 @@ export default function AddItem() {
         </View>
 
         <Button
-          label="Ajouter à ma garde-robe"
+          label={t('add.save')}
           onPress={onSave}
           loading={saving}
           disabled={!asset || !category}

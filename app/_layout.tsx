@@ -4,30 +4,42 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { LocaleProvider, useLocale } from '@/context/LocaleContext';
 import { colors } from '@/constants/theme';
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
+  const { chosen, ready } = useLocale();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !ready) return;
 
-    const group = segments[0]; // '(auth)' | '(onboarding)' | '(tabs)' | undefined
+    const route = segments[0]; // group or route name
+
+    // Language selection comes first, before anything else.
+    if (!chosen) {
+      if (route !== 'select-language') router.replace('/select-language');
+      return;
+    }
+
     const signedIn = !!session;
     const needsOnboarding = signedIn && !profile?.onboarded;
 
-    if (!signedIn && group !== '(auth)') {
+    if (route === 'select-language') {
+      // Language just chosen — fall through to the right place.
+      router.replace(signedIn ? '/(tabs)' : '/(auth)/sign-in');
+    } else if (!signedIn && route !== '(auth)') {
       router.replace('/(auth)/sign-in');
-    } else if (signedIn && needsOnboarding && group !== '(onboarding)') {
+    } else if (signedIn && needsOnboarding && route !== '(onboarding)') {
       router.replace('/(onboarding)/profile-photo');
-    } else if (signedIn && !needsOnboarding && (group === '(auth)' || group === '(onboarding)')) {
+    } else if (signedIn && !needsOnboarding && (route === '(auth)' || route === '(onboarding)')) {
       router.replace('/(tabs)');
     }
-  }, [loading, session, profile, segments]);
+  }, [loading, ready, chosen, session, profile, segments]);
 
-  if (loading) {
+  if (loading || !ready) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator color={colors.primary} />
@@ -37,6 +49,7 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="select-language" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="(tabs)" />
@@ -48,10 +61,12 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="dark" />
-        <RootNavigator />
-      </AuthProvider>
+      <LocaleProvider>
+        <AuthProvider>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </AuthProvider>
+      </LocaleProvider>
     </SafeAreaProvider>
   );
 }

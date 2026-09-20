@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutfitCard } from '@/components/OutfitCard';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useWeather } from '@/hooks/useWeather';
 import {
   clothesMap,
@@ -23,16 +24,17 @@ import {
 } from '@/lib/outfits';
 import type { Clothing } from '@/lib/types';
 import type { Weather } from '@/lib/weather';
+import type { Locale } from '@/lib/i18n';
 
-function greeting(): string {
+function greetingKey(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'Bonjour';
-  if (h < 18) return 'Bon après-midi';
-  return 'Bonsoir';
+  if (h < 12) return 'today.greetingMorning';
+  if (h < 18) return 'today.greetingAfternoon';
+  return 'today.greetingEvening';
 }
 
-function todayLabel(): string {
-  return new Date().toLocaleDateString('fr-FR', {
+function todayLabel(locale: Locale): string {
+  return new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -41,6 +43,7 @@ function todayLabel(): string {
 
 export default function Today() {
   const { session } = useAuth();
+  const { t, locale } = useLocale();
   const { state } = useWeather();
   const [outfits, setOutfits] = useState<SuggestedOutfit[]>([]);
   const [clothes, setClothes] = useState<Map<string, Clothing>>(new Map());
@@ -73,9 +76,9 @@ export default function Today() {
       const w = weather ? { temp: weather.temp, condition: weather.condition } : null;
       const { outfits: fresh, error } = await generateOutfits(w);
       if (error === 'not_enough_items') {
-        Alert.alert('Garde-robe trop petite', 'Ajoute au moins 2 vêtements pour générer des tenues.');
+        Alert.alert(t('today.tooFewTitle'), t('today.tooFewBody'));
       } else if (error) {
-        Alert.alert('Oups', error);
+        Alert.alert(t('common.error'), error);
       } else {
         setOutfits((prev) => [...fresh, ...prev]);
       }
@@ -84,7 +87,7 @@ export default function Today() {
     } finally {
       setGenerating(false);
     }
-  }, [session, weather]);
+  }, [session, weather, t]);
 
   async function rate(id: string, liked: boolean) {
     setOutfits((prev) => prev.filter((o) => o.id !== id));
@@ -101,10 +104,10 @@ export default function Today() {
         {/* Header */}
         <View style={{ gap: 2 }}>
           <Text style={{ fontSize: 15, color: colors.textMuted, textTransform: 'capitalize' }}>
-            {todayLabel()}
+            {todayLabel(locale)}
           </Text>
           <Text style={{ fontSize: 30, fontWeight: '800', color: colors.text }}>
-            {greeting()} 👋
+            {t(greetingKey())} 👋
           </Text>
         </View>
 
@@ -119,7 +122,9 @@ export default function Today() {
           <View style={[cardStyle, { gap: spacing.xs }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="cloud-offline-outline" size={22} color={colors.primaryText} />
-              <Text style={{ color: colors.primaryText, fontWeight: '700' }}>Météo indisponible</Text>
+              <Text style={{ color: colors.primaryText, fontWeight: '700' }}>
+                {t('today.weatherUnavailable')}
+              </Text>
             </View>
             <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>{state.message}</Text>
           </View>
@@ -129,7 +134,7 @@ export default function Today() {
         <View style={{ gap: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
-              Tenues du jour
+              {t('today.outfits')}
             </Text>
             <Pressable
               onPress={onGenerate}
@@ -151,7 +156,7 @@ export default function Today() {
                 <Ionicons name="sparkles" size={16} color={colors.primaryText} />
               )}
               <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 13 }}>
-                {generating ? 'Génération…' : 'Générer'}
+                {generating ? t('today.generating') : t('today.generate')}
               </Text>
             </Pressable>
           </View>
@@ -182,6 +187,7 @@ const cardStyle = {
 } as const;
 
 function WeatherCard({ weather }: { weather: Weather }) {
+  const { t } = useLocale();
   return (
     <View style={cardStyle}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -218,9 +224,9 @@ function WeatherCard({ weather }: { weather: Weather }) {
           borderTopColor: 'rgba(255,255,255,0.15)',
         }}
       >
-        <WeatherStat label="Ressenti" value={`${weather.feelsLike}°`} />
-        <WeatherStat label="Min" value={`${weather.tempMin}°`} />
-        <WeatherStat label="Max" value={`${weather.tempMax}°`} />
+        <WeatherStat label={t('today.feelsLike')} value={`${weather.feelsLike}°`} />
+        <WeatherStat label={t('today.min')} value={`${weather.tempMin}°`} />
+        <WeatherStat label={t('today.max')} value={`${weather.tempMax}°`} />
       </View>
     </View>
   );
@@ -239,6 +245,7 @@ function WeatherStat({ label, value }: { label: string; value: string }) {
 
 function EmptySuggestions() {
   const router = useRouter();
+  const { t } = useLocale();
   return (
     <View
       style={{
@@ -253,10 +260,10 @@ function EmptySuggestions() {
     >
       <Ionicons name="sparkles-outline" size={36} color={colors.textMuted} />
       <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-        Aucune tenue pour l'instant
+        {t('today.noOutfitsTitle')}
       </Text>
       <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
-        Touche « Générer » pour des tenues adaptées à la météo, ou remplis d'abord ta garde-robe.
+        {t('today.noOutfitsBody')}
       </Text>
       <Pressable
         onPress={() => router.push('/(tabs)/wardrobe')}
@@ -270,7 +277,7 @@ function EmptySuggestions() {
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Text style={{ color: colors.text, fontWeight: '700' }}>Ma garde-robe</Text>
+        <Text style={{ color: colors.text, fontWeight: '700' }}>{t('today.myWardrobe')}</Text>
       </Pressable>
     </View>
   );

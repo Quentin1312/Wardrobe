@@ -37,13 +37,17 @@ function iconFor(main: string): keyof typeof Ionicons.glyphMap {
   }
 }
 
-export async function fetchWeather(lat: number, lon: number): Promise<Weather> {
+export async function fetchWeather(
+  lat: number,
+  lon: number,
+  lang = 'en'
+): Promise<Weather> {
   if (!OWM_KEY) {
-    throw new Error('Clé OpenWeatherMap manquante (EXPO_PUBLIC_OPENWEATHER_KEY).');
+    throw new Error('OpenWeatherMap key missing (EXPO_PUBLIC_OPENWEATHER_KEY).');
   }
   const url =
     `https://api.openweathermap.org/data/2.5/weather` +
-    `?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${OWM_KEY}`;
+    `?lat=${lat}&lon=${lon}&units=metric&lang=${lang}&appid=${OWM_KEY}`;
 
   const res = await fetch(url);
   if (!res.ok) {

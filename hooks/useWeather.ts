@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
+import { useLocale } from '@/context/LocaleContext';
 import { fetchWeather, type Weather } from '@/lib/weather';
 
 type State =
@@ -8,6 +9,7 @@ type State =
   | { status: 'ready'; weather: Weather };
 
 export function useWeather() {
+  const { locale } = useLocale();
   const [state, setState] = useState<State>({ status: 'loading' });
 
   const load = useCallback(async () => {
@@ -15,18 +17,22 @@ export function useWeather() {
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
       if (!perm.granted) {
-        setState({ status: 'error', message: 'Localisation refusée.' });
+        setState({ status: 'error', message: 'Location permission denied.' });
         return;
       }
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Low,
       });
-      const weather = await fetchWeather(pos.coords.latitude, pos.coords.longitude);
+      const weather = await fetchWeather(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        locale
+      );
       setState({ status: 'ready', weather });
     } catch (e: any) {
-      setState({ status: 'error', message: e.message ?? 'Météo indisponible.' });
+      setState({ status: 'error', message: e.message ?? 'Weather unavailable.' });
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     load();

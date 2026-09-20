@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, Text, View } from 'react-native';
-import { categoryLabel } from '@/constants/categories';
+import { categoryKey } from '@/constants/categories';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useLocale } from '@/context/LocaleContext';
 import type { Clothing } from '@/lib/types';
 import type { SuggestedOutfit } from '@/lib/outfits';
 
@@ -16,6 +17,7 @@ export function OutfitCard({
   onLike: () => void;
   onSkip: () => void;
 }) {
+  const { t } = useLocale();
   const items = outfit.clothes_ids
     .map((id) => clothes.get(id))
     .filter((c): c is Clothing => !!c);
@@ -45,7 +47,7 @@ export function OutfitCard({
               resizeMode="cover"
             />
             <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: 'center' }}>
-              {categoryLabel(c.category)}
+              {t(categoryKey(c.category))}
             </Text>
           </View>
         ))}
@@ -76,7 +78,7 @@ export function OutfitCard({
           })}
         >
           <Ionicons name="close" size={18} color={colors.textMuted} />
-          <Text style={{ color: colors.text, fontWeight: '600' }}>Passer</Text>
+          <Text style={{ color: colors.text, fontWeight: '600' }}>{t('outfit.skip')}</Text>
         </Pressable>
         <Pressable
           onPress={onLike}
@@ -93,7 +95,7 @@ export function OutfitCard({
           })}
         >
           <Ionicons name="heart" size={18} color={colors.primaryText} />
-          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>J'aime</Text>
+          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('outfit.like')}</Text>
         </Pressable>
       </View>
     </View>
