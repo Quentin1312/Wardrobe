@@ -13,6 +13,7 @@ import type { Profile } from '@/lib/types';
 interface AuthContextValue {
   session: Session | null;
   profile: Profile | null;
+  /** True until BOTH the session and its profile row have been resolved. */
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -25,15 +26,23 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
+  // Guards the window between "session arrived" and "profile fetched", so the
+  // router never briefly thinks an onboarded user still needs onboarding.
+  const [profileLoading, setProfileLoading] = useState(false);
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    setProfile((data as Profile) ?? null);
+    setProfileLoading(true);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      setProfile((data as Profile) ?? null);
+    } finally {
+      setProfileLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -43,20 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session?.user) {
         await loadProfile(data.session.user.id);
       }
-      setLoading(false);
+      setSessionReady(true);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, next) => {
       setSession(next);
       if (next?.user) {
+        setProfileLoading(true);
         await loadProfile(next.user.id);
       } else {
         setProfile(null);
+        setProfileLoading(false);
       }
     });
 
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  const loading = !sessionReady || profileLoading;
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -78,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) await loadProfile(session.user.id);
       },
     }),
-    [session, profile, loading]
+    [session, profile, loading, sessionReady, profileLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
