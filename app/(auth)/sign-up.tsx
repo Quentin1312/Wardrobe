@@ -10,11 +10,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Field } from '@/components/ui';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
-import { colors, spacing } from '@/constants/theme';
+import { spacing, typography, useTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 
 export default function SignUp() {
+  const { colors } = useTheme();
   const { signUp } = useAuth();
   const { t } = useLocale();
   const [email, setEmail] = useState('');
@@ -42,19 +43,17 @@ export default function SignUp() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ alignItems: 'flex-end', padding: spacing.md }}>
+      <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
         <LanguageSwitch />
       </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={{ flex: 1, padding: spacing.lg, justifyContent: 'center', gap: spacing.lg }}>
+        <View style={{ flex: 1, padding: spacing.screen, justifyContent: 'center', gap: spacing.xl }}>
           <View style={{ gap: spacing.xs }}>
-            <Text style={{ fontSize: 34, fontWeight: '800', color: colors.text }}>
-              {t('auth.signUpTitle')}
-            </Text>
-            <Text style={{ fontSize: 16, color: colors.textMuted }}>
+            <Text style={[typography.h1, { color: colors.text }]}>{t('auth.signUpTitle')}</Text>
+            <Text style={[typography.body, { color: colors.textMuted }]}>
               {t('auth.signUpSubtitle')}
             </Text>
           </View>
@@ -79,8 +78,8 @@ export default function SignUp() {
           </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.xs }}>
-            <Text style={{ color: colors.textMuted }}>{t('auth.haveAccount')}</Text>
-            <Link href="/(auth)/sign-in" style={{ color: colors.text, fontWeight: '700' }}>
+            <Text style={[typography.body, { color: colors.textMuted }]}>{t('auth.haveAccount')}</Text>
+            <Link href="/(auth)/sign-in" style={[typography.bodyStrong, { color: colors.accent }]}>
               {t('auth.signIn')}
             </Link>
           </View>

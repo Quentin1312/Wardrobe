@@ -12,13 +12,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { categoryKey } from '@/constants/categories';
-import { colors, radius, spacing } from '@/constants/theme';
+import { radius, shadows, spacing, typography, useTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { fetchClothes } from '@/lib/clothes';
 import type { Clothing } from '@/lib/types';
 
 export default function Wardrobe() {
+  const { colors, dark } = useTheme();
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
@@ -30,13 +31,12 @@ export default function Wardrobe() {
     try {
       setItems(await fetchClothes(session.user.id));
     } catch {
-      // Silent — empty state covers it; a toast can come later.
+      // empty state covers it
     } finally {
       setLoading(false);
     }
   }, [session]);
 
-  // Refetch whenever the tab regains focus (e.g. after adding an item).
   useFocusEffect(
     useCallback(() => {
       load();
@@ -45,23 +45,11 @@ export default function Wardrobe() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View
-        style={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-        }}
-      >
-        <View>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
-            {t('wardrobe.title')}
-          </Text>
-          <Text style={{ fontSize: 15, color: colors.textMuted }}>
-            {items.length > 0 ? t('wardrobe.count', { count: items.length }) : t('wardrobe.subtitle')}
-          </Text>
-        </View>
+      <View style={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
+        <Text style={[typography.h1, { color: colors.text }]}>{t('wardrobe.title')}</Text>
+        <Text style={[typography.small, { color: colors.textMuted }]}>
+          {items.length > 0 ? t('wardrobe.count', { count: items.length }) : t('wardrobe.subtitle')}
+        </Text>
       </View>
 
       {loading ? (
@@ -79,41 +67,36 @@ export default function Wardrobe() {
           data={items}
           keyExtractor={(i) => i.id}
           numColumns={2}
-          contentContainerStyle={{ padding: spacing.md, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: spacing.md, paddingBottom: 110 }}
           columnWrapperStyle={{ gap: spacing.md }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           renderItem={({ item }) => <ClothingCard item={item} />}
         />
       )}
 
-      {/* Floating add button */}
       <Pressable
         onPress={() => router.push('/add-item')}
         style={({ pressed }) => ({
           position: 'absolute',
-          right: spacing.lg,
+          right: spacing.screen,
           bottom: spacing.lg,
           width: 60,
           height: 60,
           borderRadius: radius.full,
-          backgroundColor: colors.primary,
+          backgroundColor: pressed ? colors.primaryPressed : colors.primary,
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: pressed ? 0.85 : 1,
-          shadowColor: '#000',
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 6,
+          ...shadows.floating(dark),
         })}
       >
-        <Ionicons name="add" size={32} color={colors.primaryText} />
+        <Ionicons name="add" size={30} color={colors.primaryText} />
       </Pressable>
     </SafeAreaView>
   );
 }
 
 function ClothingCard({ item }: { item: Clothing }) {
+  const { colors } = useTheme();
   const { t } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
   return (
@@ -121,7 +104,7 @@ function ClothingCard({ item }: { item: Clothing }) {
       style={{
         flex: 1,
         backgroundColor: colors.surface,
-        borderRadius: radius.md,
+        borderRadius: radius.lg,
         borderWidth: 1,
         borderColor: colors.border,
         overflow: 'hidden',
@@ -141,7 +124,7 @@ function ClothingCard({ item }: { item: Clothing }) {
             }}
           />
         ) : null}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+        <Text style={[typography.small, { color: colors.text }]}>
           {t(categoryKey(item.category))}
         </Text>
       </View>

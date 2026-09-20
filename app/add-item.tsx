@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { pickFromLibrary, takePhoto } from '@/components/PhotoPicker';
 import { Button } from '@/components/ui';
 import { CATEGORIES } from '@/constants/categories';
-import { colors, radius, spacing } from '@/constants/theme';
+import { radius, spacing, typography, useTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { addClothing } from '@/lib/clothes';
@@ -15,6 +15,7 @@ import type { ClothingCategory } from '@/lib/types';
 import { uploadImage } from '@/lib/upload';
 
 export default function AddItem() {
+  const { colors } = useTheme();
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
@@ -40,26 +41,22 @@ export default function AddItem() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: spacing.lg,
+          paddingHorizontal: spacing.screen,
           paddingVertical: spacing.md,
         }}
       >
-        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text }}>
-          {t('add.title')}
-        </Text>
+        <Text style={[typography.h2, { color: colors.text }]}>{t('add.title')}</Text>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={26} color={colors.textMuted} />
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
-        {/* Photo */}
+      <ScrollView contentContainerStyle={{ padding: spacing.screen, gap: spacing.lg }}>
         <Pressable
           onPress={async () => {
             const a = await takePhoto();
@@ -67,8 +64,8 @@ export default function AddItem() {
           }}
           style={{
             aspectRatio: 1,
-            borderRadius: radius.lg,
-            backgroundColor: colors.surface,
+            borderRadius: radius.xl,
+            backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
             borderColor: colors.border,
             alignItems: 'center',
@@ -81,8 +78,10 @@ export default function AddItem() {
           ) : (
             <View style={{ alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
-              <Text style={{ color: colors.textMuted }}>{t('add.takePhoto')}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t('add.photoHint')}</Text>
+              <Text style={[typography.bodyStrong, { color: colors.text }]}>
+                {t('add.takePhoto')}
+              </Text>
+              <Text style={[typography.small, { color: colors.textMuted }]}>{t('add.photoHint')}</Text>
             </View>
           )}
         </Pressable>
@@ -96,11 +95,8 @@ export default function AddItem() {
           }}
         />
 
-        {/* Category picker */}
         <View style={{ gap: spacing.sm }}>
-          <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '600' }}>
-            {t('add.category')}
-          </Text>
+          <Text style={[typography.eyebrow, { color: colors.textMuted }]}>{t('add.category')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {CATEGORIES.map((c) => {
               const active = category === c.key;
@@ -117,7 +113,7 @@ export default function AddItem() {
                     borderRadius: radius.full,
                     borderWidth: 1,
                     borderColor: active ? colors.primary : colors.border,
-                    backgroundColor: active ? colors.primary : colors.bg,
+                    backgroundColor: active ? colors.primary : colors.surface,
                   }}
                 >
                   <Ionicons
@@ -126,10 +122,10 @@ export default function AddItem() {
                     color={active ? colors.primaryText : colors.text}
                   />
                   <Text
-                    style={{
-                      color: active ? colors.primaryText : colors.text,
-                      fontWeight: '600',
-                    }}
+                    style={[
+                      typography.bodyStrong,
+                      { color: active ? colors.primaryText : colors.text },
+                    ]}
                   >
                     {t(`category.${c.key}`)}
                   </Text>

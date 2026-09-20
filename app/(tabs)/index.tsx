@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutfitCard } from '@/components/OutfitCard';
-import { colors, radius, spacing } from '@/constants/theme';
+import { radius, spacing, typography, useTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { useWeather } from '@/hooks/useWeather';
@@ -42,6 +42,7 @@ function todayLabel(locale: Locale): string {
 }
 
 export default function Today() {
+  const { colors } = useTheme();
   const { session } = useAuth();
   const { t, locale } = useLocale();
   const { state } = useWeather();
@@ -62,7 +63,7 @@ export default function Today() {
         setOutfits(today);
         setClothes(map);
       } catch {
-        // Non-fatal on the home screen.
+        // non-fatal
       }
     })();
   }, [session]);
@@ -83,7 +84,7 @@ export default function Today() {
         setOutfits((prev) => [...fresh, ...prev]);
       }
     } catch (e: any) {
-      Alert.alert('Erreur', e.message ?? 'Génération impossible.');
+      Alert.alert(t('common.error'), e.message ?? 'Generation failed.');
     } finally {
       setGenerating(false);
     }
@@ -94,48 +95,49 @@ export default function Today() {
     try {
       await setOutfitLiked(id, liked);
     } catch {
-      // Optimistic — ignore failures for now.
+      // optimistic
     }
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
-        {/* Header */}
+      <ScrollView contentContainerStyle={{ padding: spacing.screen, gap: spacing.lg, paddingBottom: 110 }}>
         <View style={{ gap: 2 }}>
-          <Text style={{ fontSize: 15, color: colors.textMuted, textTransform: 'capitalize' }}>
+          <Text style={[typography.eyebrow, { color: colors.textMuted }]}>
             {todayLabel(locale)}
           </Text>
-          <Text style={{ fontSize: 30, fontWeight: '800', color: colors.text }}>
-            {t(greetingKey())} 👋
-          </Text>
+          <Text style={[typography.h1, { color: colors.text }]}>{t(greetingKey())}</Text>
         </View>
 
-        {/* Weather */}
         {state.status === 'loading' ? (
-          <View style={[cardStyle, { alignItems: 'center', paddingVertical: spacing.xl }]}>
-            <ActivityIndicator color={colors.primaryText} />
+          <View
+            style={{
+              backgroundColor: colors.hero,
+              borderRadius: radius.xl,
+              padding: spacing.lg,
+              alignItems: 'center',
+              paddingVertical: spacing.xl,
+            }}
+          >
+            <ActivityIndicator color={colors.heroText} />
           </View>
         ) : state.status === 'ready' ? (
           <WeatherCard weather={state.weather} />
         ) : (
-          <View style={[cardStyle, { gap: spacing.xs }]}>
+          <View style={{ backgroundColor: colors.hero, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Ionicons name="cloud-offline-outline" size={22} color={colors.primaryText} />
-              <Text style={{ color: colors.primaryText, fontWeight: '700' }}>
+              <Ionicons name="cloud-offline-outline" size={22} color={colors.heroText} />
+              <Text style={[typography.bodyStrong, { color: colors.heroText }]}>
                 {t('today.weatherUnavailable')}
               </Text>
             </View>
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>{state.message}</Text>
+            <Text style={[typography.small, { color: colors.heroMuted }]}>{state.message}</Text>
           </View>
         )}
 
-        {/* Suggestions */}
         <View style={{ gap: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
-              {t('today.outfits')}
-            </Text>
+            <Text style={[typography.h2, { color: colors.text }]}>{t('today.outfits')}</Text>
             <Pressable
               onPress={onGenerate}
               disabled={generating}
@@ -146,16 +148,16 @@ export default function Today() {
                 paddingVertical: 8,
                 paddingHorizontal: spacing.md,
                 borderRadius: radius.full,
-                backgroundColor: colors.primary,
-                opacity: generating ? 0.5 : pressed ? 0.85 : 1,
+                backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+                opacity: generating ? 0.5 : 1,
               })}
             >
               {generating ? (
                 <ActivityIndicator size="small" color={colors.primaryText} />
               ) : (
-                <Ionicons name="sparkles" size={16} color={colors.primaryText} />
+                <Ionicons name="color-wand-outline" size={16} color={colors.primaryText} />
               )}
-              <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 13 }}>
+              <Text style={[typography.caption, { color: colors.primaryText }]}>
                 {generating ? t('today.generating') : t('today.generate')}
               </Text>
             </Pressable>
@@ -180,22 +182,16 @@ export default function Today() {
   );
 }
 
-const cardStyle = {
-  backgroundColor: colors.primary,
-  borderRadius: radius.lg,
-  padding: spacing.lg,
-} as const;
-
 function WeatherCard({ weather }: { weather: Weather }) {
+  const { colors } = useTheme();
   const { t } = useLocale();
   return (
-    <View style={cardStyle}>
+    <View style={{ backgroundColor: colors.hero, borderRadius: radius.xl, padding: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-        <Ionicons name="location-outline" size={16} color="rgba(255,255,255,0.8)" />
-        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '600' }}>
-          {weather.city}
-        </Text>
+        <Ionicons name="location-outline" size={16} color={colors.heroMuted} />
+        <Text style={[typography.caption, { color: colors.heroMuted }]}>{weather.city}</Text>
       </View>
+
       <View
         style={{
           flexDirection: 'row',
@@ -205,15 +201,14 @@ function WeatherCard({ weather }: { weather: Weather }) {
         }}
       >
         <View>
-          <Text style={{ color: colors.primaryText, fontSize: 56, fontWeight: '800', lineHeight: 60 }}>
-            {weather.temp}°
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 15, textTransform: 'capitalize' }}>
+          <Text style={[typography.display, { color: colors.heroText }]}>{weather.temp}°</Text>
+          <Text style={[typography.body, { color: colors.heroMuted, textTransform: 'capitalize' }]}>
             {weather.condition}
           </Text>
         </View>
-        <Ionicons name={weather.icon} size={80} color={colors.primaryText} />
+        <Ionicons name={weather.icon} size={76} color={colors.heroAccent} />
       </View>
+
       <View
         style={{
           flexDirection: 'row',
@@ -221,7 +216,7 @@ function WeatherCard({ weather }: { weather: Weather }) {
           marginTop: spacing.md,
           paddingTop: spacing.md,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255,255,255,0.15)',
+          borderTopColor: colors.heroMuted + '33',
         }}
       >
         <WeatherStat label={t('today.feelsLike')} value={`${weather.feelsLike}°`} />
@@ -233,19 +228,19 @@ function WeatherCard({ weather }: { weather: Weather }) {
 }
 
 function WeatherStat({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
   return (
     <View>
-      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600' }}>
-        {label}
-      </Text>
-      <Text style={{ color: colors.primaryText, fontSize: 16, fontWeight: '700' }}>{value}</Text>
+      <Text style={[typography.caption, { color: colors.heroMuted }]}>{label}</Text>
+      <Text style={[typography.h3, { color: colors.heroText }]}>{value}</Text>
     </View>
   );
 }
 
 function EmptySuggestions() {
-  const router = useRouter();
+  const { colors } = useTheme();
   const { t } = useLocale();
+  const router = useRouter();
   return (
     <View
       style={{
@@ -258,11 +253,11 @@ function EmptySuggestions() {
         gap: spacing.sm,
       }}
     >
-      <Ionicons name="sparkles-outline" size={36} color={colors.textMuted} />
-      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
+      <Ionicons name="color-wand-outline" size={36} color={colors.textMuted} />
+      <Text style={[typography.h3, { color: colors.text, textAlign: 'center' }]}>
         {t('today.noOutfitsTitle')}
       </Text>
-      <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
+      <Text style={[typography.small, { color: colors.textMuted, textAlign: 'center' }]}>
         {t('today.noOutfitsBody')}
       </Text>
       <Pressable
@@ -273,11 +268,11 @@ function EmptySuggestions() {
           paddingHorizontal: spacing.lg,
           borderRadius: radius.full,
           borderWidth: 1,
-          borderColor: colors.border,
-          opacity: pressed ? 0.7 : 1,
+          borderColor: colors.borderStrong,
+          backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
         })}
       >
-        <Text style={{ color: colors.text, fontWeight: '700' }}>{t('today.myWardrobe')}</Text>
+        <Text style={[typography.button, { color: colors.text }]}>{t('today.myWardrobe')}</Text>
       </Pressable>
     </View>
   );

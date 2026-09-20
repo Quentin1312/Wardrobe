@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
-import { colors, spacing } from '@/constants/theme';
+import { spacing, typography, useTheme } from '@/constants/theme';
 
 export function EmptyState({
   icon,
@@ -11,6 +11,7 @@ export function EmptyState({
   title: string;
   subtitle: string;
 }) {
+  const { colors } = useTheme();
   return (
     <View
       style={{
@@ -21,11 +22,9 @@ export function EmptyState({
         padding: spacing.xl,
       }}
     >
-      <Ionicons name={icon} size={48} color={colors.textMuted} />
-      <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-        {title}
-      </Text>
-      <Text style={{ fontSize: 15, color: colors.textMuted, textAlign: 'center' }}>
+      <Ionicons name={icon} size={44} color={colors.textMuted} />
+      <Text style={[typography.h2, { color: colors.text, textAlign: 'center' }]}>{title}</Text>
+      <Text style={[typography.body, { color: colors.textMuted, textAlign: 'center' }]}>
         {subtitle}
       </Text>
     </View>

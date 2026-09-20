@@ -1,19 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { colors } from '@/constants/theme';
+import { fonts, useTheme } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 
 export default function TabsLayout() {
   const { t } = useLocale();
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: { fontFamily: fonts.sansMedium, fontSize: 11 },
         tabBarStyle: {
-          backgroundColor: colors.bg,
+          backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          height: 64,
+          paddingTop: 6,
         },
       }}
     >
@@ -22,7 +26,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.today'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sparkles-outline" color={color} size={size} />
+            <Ionicons name="today-outline" color={color} size={size} />
           ),
         }}
       />

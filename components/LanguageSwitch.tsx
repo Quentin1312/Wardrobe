@@ -1,20 +1,21 @@
 import { Pressable, Text, View } from 'react-native';
-import { colors, radius, spacing } from '@/constants/theme';
+import { radius, spacing, typography, useTheme } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { LOCALES } from '@/lib/i18n';
 
 /** Compact FR / EN segmented toggle. */
 export function LanguageSwitch() {
+  const { colors } = useTheme();
   const { locale, setLocale } = useLocale();
   return (
     <View
       style={{
         flexDirection: 'row',
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceAlt,
         borderRadius: radius.full,
         borderWidth: 1,
         borderColor: colors.border,
-        padding: 2,
+        padding: 3,
       }}
     >
       {LOCALES.map((l) => {
@@ -31,11 +32,10 @@ export function LanguageSwitch() {
             }}
           >
             <Text
-              style={{
-                color: active ? colors.primaryText : colors.textMuted,
-                fontWeight: '700',
-                fontSize: 13,
-              }}
+              style={[
+                typography.caption,
+                { color: active ? colors.primaryText : colors.textMuted },
+              ]}
             >
               {l.flag} {l.code.toUpperCase()}
             </Text>

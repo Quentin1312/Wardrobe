@@ -6,7 +6,7 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
-import { colors, radius, spacing } from '@/constants/theme';
+import { radius, spacing, typography, useTheme } from '@/constants/theme';
 
 export function Button({
   label,
@@ -21,6 +21,7 @@ export function Button({
   disabled?: boolean;
   variant?: 'primary' | 'ghost';
 }) {
+  const { colors } = useTheme();
   const isPrimary = variant === 'primary';
   const isDisabled = disabled || loading;
   return (
@@ -28,27 +29,26 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled}
       style={({ pressed }) => ({
-        backgroundColor: isPrimary ? colors.primary : 'transparent',
+        backgroundColor: isPrimary
+          ? pressed
+            ? colors.primaryPressed
+            : colors.primary
+          : 'transparent',
         borderWidth: isPrimary ? 0 : 1,
-        borderColor: colors.border,
-        paddingVertical: 14,
+        borderColor: colors.borderStrong,
+        paddingVertical: 16,
         paddingHorizontal: spacing.lg,
-        borderRadius: radius.md,
+        borderRadius: radius.full,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
+        minHeight: 52,
+        opacity: isDisabled ? 0.45 : 1,
       })}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.primaryText : colors.primary} />
+        <ActivityIndicator color={isPrimary ? colors.primaryText : colors.text} />
       ) : (
-        <Text
-          style={{
-            color: isPrimary ? colors.primaryText : colors.text,
-            fontSize: 16,
-            fontWeight: '600',
-          }}
-        >
+        <Text style={[typography.button, { color: isPrimary ? colors.primaryText : colors.text }]}>
           {label}
         </Text>
       )}
@@ -56,27 +56,25 @@ export function Button({
   );
 }
 
-export function Field({
-  label,
-  ...props
-}: TextInputProps & { label: string }) {
+export function Field({ label, ...props }: TextInputProps & { label: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '600' }}>
-        {label}
-      </Text>
+      <Text style={[typography.eyebrow, { color: colors.textMuted }]}>{label}</Text>
       <TextInput
         placeholderTextColor={colors.textMuted}
-        style={{
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: radius.md,
-          paddingHorizontal: spacing.md,
-          paddingVertical: 12,
-          fontSize: 16,
-          color: colors.text,
-          backgroundColor: colors.surface,
-        }}
+        style={[
+          typography.body,
+          {
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: radius.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 14,
+            color: colors.text,
+            backgroundColor: colors.surface,
+          },
+        ]}
         {...props}
       />
     </View>
