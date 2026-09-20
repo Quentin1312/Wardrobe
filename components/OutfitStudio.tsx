@@ -53,39 +53,6 @@ export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStud
           borderColor: colors.border,
         }}
       >
-        <StudioGrid color={PAPER_MUTED} />
-
-        <View
-          style={{
-            position: 'absolute',
-            top: 16,
-            left: 16,
-            right: 16,
-            zIndex: 30,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingVertical: 7,
-              paddingHorizontal: 11,
-              borderRadius: radius.full,
-              backgroundColor: PAPER_INK,
-            }}
-          >
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.energy }} />
-            <Text style={[typography.eyebrow, { color: '#F9F9F5' }]}>{t('outfitDay.studioLabel')}</Text>
-          </View>
-          <Text style={[typography.caption, { color: PAPER_MUTED }]}>{t('outfitDay.studioHint')}</Text>
-        </View>
-
-        <Silhouette color="#E1E1DA" accent={colors.accent} />
-
         {SLOTS.map((slot) => (
           <GarmentSlot
             key={slot.category}
@@ -233,51 +200,3 @@ function ArrowButton({
   );
 }
 
-function StudioGrid({ color }: { color: string }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.1 }}
-    >
-      {[25, 50, 75].map((left) => (
-        <View
-          key={`v-${left}`}
-          style={{ position: 'absolute', left: `${left}%`, top: 0, bottom: 0, width: 1, backgroundColor: color }}
-        />
-      ))}
-      {[25, 50, 75].map((top) => (
-        <View
-          key={`h-${top}`}
-          style={{ position: 'absolute', top: `${top}%`, left: 0, right: 0, height: 1, backgroundColor: color }}
-        />
-      ))}
-    </View>
-  );
-}
-
-function Silhouette({ color, accent }: { color: string; accent: string }) {
-  return (
-    <View pointerEvents="none" style={{ position: 'absolute', top: 65, alignSelf: 'center', alignItems: 'center', opacity: 0.5 }}>
-      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: color }} />
-      <View style={{ width: 21, height: 20, backgroundColor: color, marginTop: -2 }} />
-      <View
-        style={{
-          width: 144,
-          height: 148,
-          borderTopLeftRadius: 52,
-          borderTopRightRadius: 52,
-          borderBottomLeftRadius: 32,
-          borderBottomRightRadius: 32,
-          backgroundColor: color,
-          marginTop: -2,
-          borderWidth: 1,
-          borderColor: accent,
-        }}
-      />
-      <View style={{ flexDirection: 'row', gap: 13, marginTop: -4 }}>
-        <View style={{ width: 48, height: 175, borderRadius: 28, backgroundColor: color, transform: [{ rotate: '2deg' }] }} />
-        <View style={{ width: 48, height: 175, borderRadius: 28, backgroundColor: color, transform: [{ rotate: '-2deg' }] }} />
-      </View>
-    </View>
-  );
-}
