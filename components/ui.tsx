@@ -6,7 +6,8 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
-import { radius, spacing, typography, useTheme } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 export function Button({
   label,

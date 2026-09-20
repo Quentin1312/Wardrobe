@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { radius, spacing, typography, useTheme } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 import { LOCALES } from '@/lib/i18n';
 

@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { Image, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { Button } from '@/components/ui';
-import { radius, spacing, typography, useTheme } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 
@@ -17,7 +20,7 @@ export default function Profile() {
       <View style={{ flex: 1, padding: spacing.screen, gap: spacing.lg }}>
         <Text style={[typography.h1, { color: colors.text }]}>{t('profile.title')}</Text>
 
-        <View style={{ alignItems: 'center', gap: spacing.md, marginTop: spacing.md }}>
+        <View style={{ alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
           <View
             style={{
               width: 120,
@@ -39,31 +42,44 @@ export default function Profile() {
               </Text>
             )}
           </View>
-          <Text style={[typography.body, { color: colors.text }]}>{session?.user.email}</Text>
+          {profile?.first_name ? (
+            <Text style={[typography.h3, { color: colors.text }]}>{profile.first_name}</Text>
+          ) : null}
+          <Text style={[typography.small, { color: colors.textMuted }]}>{session?.user.email}</Text>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingVertical: spacing.md,
-            paddingHorizontal: spacing.md,
-            borderRadius: radius.md,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-          }}
-        >
-          <Text style={[typography.bodyStrong, { color: colors.text }]}>
-            {t('profile.language')}
-          </Text>
+        <SettingRow label={t('profile.language')}>
           <LanguageSwitch />
-        </View>
+        </SettingRow>
+        <SettingRow label={t('profile.theme')}>
+          <ThemeSwitch />
+        </SettingRow>
 
         <View style={{ flex: 1 }} />
         <Button label={t('profile.signOut')} variant="ghost" onPress={signOut} />
       </View>
     </SafeAreaView>
+  );
+}
+
+function SettingRow({ label, children }: { label: string; children: ReactNode }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+      }}
+    >
+      <Text style={[typography.bodyStrong, { color: colors.text }]}>{label}</Text>
+      {children}
+    </View>
   );
 }

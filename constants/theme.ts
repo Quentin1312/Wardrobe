@@ -7,7 +7,7 @@
 //   import { useFonts, InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 //   import { InstrumentSans_400Regular, InstrumentSans_500Medium, InstrumentSans_600SemiBold, InstrumentSans_700Bold } from '@expo-google-fonts/instrument-sans';
 
-import { useColorScheme, Platform, TextStyle, ViewStyle } from 'react-native';
+import { TextStyle, ViewStyle } from 'react-native';
 
 export const lightColors = {
   // --- clés existantes ---
@@ -134,19 +134,4 @@ export const layout = {
   screenTop: (insetTop: number) => insetTop + 8,
 };
 
-export function useTheme() {
-  const scheme = useColorScheme();
-  const dark = scheme === 'dark';
-  return {
-    dark,
-    colors: dark ? darkColors : lightColors,
-    spacing,
-    radius,
-    fonts,
-    typography,
-    shadows: {
-      floating: shadows.floating(dark),
-      sheet: shadows.sheet(dark),
-    },
-  };
-}
+// useTheme() now lives in context/ThemeContext.tsx (supports manual light/dark toggle).

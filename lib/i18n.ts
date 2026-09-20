@@ -34,6 +34,8 @@ const en: Dict = {
   'auth.confirmEmailMsg':
     'Check your inbox to confirm your email, then sign in.',
 
+  'onboarding.name': 'First name',
+  'onboarding.namePlaceholder': 'Your name',
   'onboarding.photoTitle': 'Add a profile photo',
   'onboarding.photoSubtitle':
     'A clear portrait on a neutral background. We use it later to show you wearing outfits.',
@@ -60,6 +62,8 @@ const en: Dict = {
   'today.myWardrobe': 'My wardrobe',
   'today.tooFewTitle': 'Wardrobe too small',
   'today.tooFewBody': 'Add at least 2 items to generate outfits.',
+  'today.noOutfitTitle': 'No outfit found',
+  'today.noOutfitBody': 'Could not build an outfit from your wardrobe. Add more variety and try again.',
   'today.feelsLike': 'Feels like',
   'today.min': 'Min',
   'today.max': 'Max',
@@ -69,6 +73,10 @@ const en: Dict = {
   'wardrobe.count': '{count} item(s)',
   'wardrobe.emptyTitle': 'Wardrobe is empty',
   'wardrobe.emptyBody': 'Photograph your clothes to get started.',
+  'wardrobe.all': 'All',
+  'wardrobe.deleteTitle': 'Delete this item?',
+  'wardrobe.deleteBody': 'This cannot be undone.',
+  'common.delete': 'Delete',
 
   'add.title': 'Add an item',
   'add.takePhoto': 'Take a photo',
@@ -86,6 +94,10 @@ const en: Dict = {
   'profile.signOut': 'Sign out',
   'profile.noPhoto': 'No photo',
   'profile.language': 'Language',
+  'profile.theme': 'Theme',
+  'theme.system': 'System',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
 
   'category.top': 'Top',
   'category.bottom': 'Bottom',
@@ -122,6 +134,8 @@ const fr: Dict = {
   'auth.confirmEmailMsg':
     'Vérifie ta boîte mail pour confirmer ton email, puis connecte-toi.',
 
+  'onboarding.name': 'Prénom',
+  'onboarding.namePlaceholder': 'Ton prénom',
   'onboarding.photoTitle': 'Ajoute une photo de profil',
   'onboarding.photoSubtitle':
     'Un portrait net sur fond neutre. On l’utilise ensuite pour te montrer portant les tenues.',
@@ -148,6 +162,8 @@ const fr: Dict = {
   'today.myWardrobe': 'Ma garde-robe',
   'today.tooFewTitle': 'Garde-robe trop petite',
   'today.tooFewBody': 'Ajoute au moins 2 vêtements pour générer des tenues.',
+  'today.noOutfitTitle': 'Aucune tenue trouvée',
+  'today.noOutfitBody': 'Impossible de composer une tenue avec ta garde-robe. Ajoute plus de variété et réessaie.',
   'today.feelsLike': 'Ressenti',
   'today.min': 'Min',
   'today.max': 'Max',
@@ -157,6 +173,10 @@ const fr: Dict = {
   'wardrobe.count': '{count} pièce(s)',
   'wardrobe.emptyTitle': 'Garde-robe vide',
   'wardrobe.emptyBody': 'Photographie tes vêtements pour commencer.',
+  'wardrobe.all': 'Tout',
+  'wardrobe.deleteTitle': 'Supprimer cette pièce ?',
+  'wardrobe.deleteBody': 'Action irréversible.',
+  'common.delete': 'Supprimer',
 
   'add.title': 'Ajouter une pièce',
   'add.takePhoto': 'Prendre une photo',
@@ -174,6 +194,10 @@ const fr: Dict = {
   'profile.signOut': 'Se déconnecter',
   'profile.noPhoto': 'Pas de photo',
   'profile.language': 'Langue',
+  'profile.theme': 'Thème',
+  'theme.system': 'Système',
+  'theme.light': 'Clair',
+  'theme.dark': 'Sombre',
 
   'category.top': 'Haut',
   'category.bottom': 'Bas',

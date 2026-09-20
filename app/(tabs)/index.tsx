@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutfitCard } from '@/components/OutfitCard';
-import { radius, spacing, typography, useTheme } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { useWeather } from '@/hooks/useWeather';
@@ -43,7 +44,7 @@ function todayLabel(locale: Locale): string {
 
 export default function Today() {
   const { colors } = useTheme();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { t, locale } = useLocale();
   const { state } = useWeather();
   const [outfits, setOutfits] = useState<SuggestedOutfit[]>([]);
@@ -78,6 +79,8 @@ export default function Today() {
       const { outfits: fresh, error } = await generateOutfits(w);
       if (error === 'not_enough_items') {
         Alert.alert(t('today.tooFewTitle'), t('today.tooFewBody'));
+      } else if (error === 'empty' || error === 'no_valid_outfit') {
+        Alert.alert(t('today.noOutfitTitle'), t('today.noOutfitBody'));
       } else if (error) {
         Alert.alert(t('common.error'), error);
       } else {
@@ -106,7 +109,9 @@ export default function Today() {
           <Text style={[typography.eyebrow, { color: colors.textMuted }]}>
             {todayLabel(locale)}
           </Text>
-          <Text style={[typography.h1, { color: colors.text }]}>{t(greetingKey())}</Text>
+          <Text style={[typography.h1, { color: colors.text }]}>
+            {t(greetingKey())}{profile?.first_name ? ` ${profile.first_name}` : ''}
+          </Text>
         </View>
 
         {state.status === 'loading' ? (

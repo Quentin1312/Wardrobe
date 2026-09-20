@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, Text, View } from 'react-native';
 import { categoryKey } from '@/constants/categories';
-import { radius, spacing, typography, useTheme } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 import type { Clothing } from '@/lib/types';
 import type { SuggestedOutfit } from '@/lib/outfits';

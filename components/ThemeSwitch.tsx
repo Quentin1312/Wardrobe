@@ -1,13 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 import { radius, spacing, typography } from '@/constants/theme';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
-import { LOCALES } from '@/lib/i18n';
 
-/** Compact FR / EN segmented toggle. */
-export function LanguageSwitch() {
-  const { colors } = useTheme();
-  const { locale, setLocale } = useLocale();
+const MODES: ThemeMode[] = ['system', 'light', 'dark'];
+
+export function ThemeSwitch() {
+  const { colors, mode, setMode } = useTheme();
+  const { t } = useLocale();
   return (
     <View
       style={{
@@ -19,26 +19,23 @@ export function LanguageSwitch() {
         padding: 3,
       }}
     >
-      {LOCALES.map((l) => {
-        const active = locale === l.code;
+      {MODES.map((m) => {
+        const active = mode === m;
         return (
           <Pressable
-            key={l.code}
-            onPress={() => setLocale(l.code)}
+            key={m}
+            onPress={() => setMode(m)}
             style={{
               paddingVertical: 6,
-              paddingHorizontal: spacing.md,
+              paddingHorizontal: spacing.sm,
               borderRadius: radius.full,
               backgroundColor: active ? colors.primary : 'transparent',
             }}
           >
             <Text
-              style={[
-                typography.caption,
-                { color: active ? colors.primaryText : colors.textMuted },
-              ]}
+              style={[typography.caption, { color: active ? colors.primaryText : colors.textMuted }]}
             >
-              {l.code.toUpperCase()}
+              {t(`theme.${m}`)}
             </Text>
           </Pressable>
         );

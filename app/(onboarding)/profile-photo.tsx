@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/ui';
+import { Button, Field } from '@/components/ui';
 import { pickFromLibrary, takePhoto } from '@/components/PhotoPicker';
-import { radius, spacing, typography, useTheme } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { supabase } from '@/lib/supabase';
@@ -15,11 +16,12 @@ export default function ProfilePhoto() {
   const { colors } = useTheme();
   const { session, refreshProfile } = useAuth();
   const { t } = useLocale();
+  const [firstName, setFirstName] = useState('');
   const [asset, setAsset] = useState<ImagePickerAsset | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function onSave() {
-    if (!session?.user || !asset) return;
+    if (!session?.user || !asset || !firstName.trim()) return;
     setSaving(true);
     try {
       const userId = session.user.id;
@@ -28,6 +30,7 @@ export default function ProfilePhoto() {
       const { error } = await supabase.from('profiles').upsert({
         id: userId,
         email: session.user.email,
+        first_name: firstName.trim(),
         profile_photo_url: url,
         onboarded: true,
       });
@@ -42,19 +45,27 @@ export default function ProfilePhoto() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ flex: 1, padding: spacing.screen, gap: spacing.lg }}>
-        <View style={{ gap: spacing.xs, marginTop: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.screen, gap: spacing.lg }}>
+        <View style={{ gap: spacing.xs, marginTop: spacing.md }}>
           <Text style={[typography.h1, { color: colors.text }]}>{t('onboarding.photoTitle')}</Text>
           <Text style={[typography.body, { color: colors.textMuted }]}>
             {t('onboarding.photoSubtitle')}
           </Text>
         </View>
 
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Field
+          label={t('onboarding.name')}
+          value={firstName}
+          onChangeText={setFirstName}
+          placeholder={t('onboarding.namePlaceholder')}
+          autoCapitalize="words"
+        />
+
+        <View style={{ alignItems: 'center', paddingVertical: spacing.md }}>
           <View
             style={{
-              width: 240,
-              height: 300,
+              width: 220,
+              height: 280,
               borderRadius: radius.xl,
               backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
@@ -99,9 +110,9 @@ export default function ProfilePhoto() {
           label={t('onboarding.saveContinue')}
           onPress={onSave}
           loading={saving}
-          disabled={!asset}
+          disabled={!asset || !firstName.trim()}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -16,6 +16,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LocaleProvider, useLocale } from '@/context/LocaleContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { colors } from '@/constants/theme';
 
 function RootNavigator() {
@@ -89,12 +90,14 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <LocaleProvider>
-        <AuthProvider>
-          <StatusBar style="dark" />
-          <RootNavigator />
-        </AuthProvider>
-      </LocaleProvider>
+      <ThemeProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <StatusBar style="auto" />
+            <RootNavigator />
+          </AuthProvider>
+        </LocaleProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

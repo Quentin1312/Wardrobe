@@ -10,6 +10,7 @@ export type ClothingCategory =
 export interface Profile {
   id: string; // = auth.users.id
   email: string | null;
+  first_name: string | null;
   profile_photo_url: string | null;
   profile_photo_clean_url: string | null; // after SAM
   location_city: string | null;

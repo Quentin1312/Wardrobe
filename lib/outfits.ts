@@ -13,11 +13,28 @@ export async function generateOutfits(weather: {
   const { data, error } = await supabase.functions.invoke('suggest-outfits', {
     body: { weather, count: 3 },
   });
-  if (error) return { outfits: [], error: error.message };
+
+  // On a non-2xx, supabase-js hides the function's JSON body inside error.context.
+  // Read it so the real reason (Groq key missing, model error, etc.) surfaces.
+  if (error) {
+    let detail = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) detail = body.error;
+    } catch {
+      // keep the generic message
+    }
+    return { outfits: [], error: detail };
+  }
+
   if (data?.error && (!data.outfits || data.outfits.length === 0)) {
     return { outfits: [], error: data.error };
   }
-  return { outfits: (data?.outfits ?? []) as SuggestedOutfit[] };
+
+  const outfits = (data?.outfits ?? []) as SuggestedOutfit[];
+  // Never resolve silently empty — the caller should always get a signal.
+  if (outfits.length === 0) return { outfits: [], error: 'empty' };
+  return { outfits };
 }
 
 /** Today's already-generated outfits, newest first. */

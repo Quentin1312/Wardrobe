@@ -13,6 +13,7 @@ exception when duplicate_object then null; end $$;
 create table if not exists public.profiles (
   id                        uuid primary key references auth.users(id) on delete cascade,
   email                     text,
+  first_name                text,
   profile_photo_url         text,
   profile_photo_clean_url   text,             -- after SAM background removal
   location_city             text,

@@ -1,22 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
-import { categoryKey } from '@/constants/categories';
-import { radius, shadows, spacing, typography, useTheme } from '@/constants/theme';
+import { CATEGORIES, categoryKey } from '@/constants/categories';
+import { radius, shadows, spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { fetchClothes } from '@/lib/clothes';
-import type { Clothing } from '@/lib/types';
+import { deleteClothing, fetchClothes } from '@/lib/clothes';
+import type { Clothing, ClothingCategory } from '@/lib/types';
 
 export default function Wardrobe() {
   const { colors, dark } = useTheme();
@@ -25,6 +28,7 @@ export default function Wardrobe() {
   const router = useRouter();
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<ClothingCategory | 'all'>('all');
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -43,6 +47,31 @@ export default function Wardrobe() {
     }, [load])
   );
 
+  async function onDelete(item: Clothing) {
+    Alert.alert(t('wardrobe.deleteTitle'), t('wardrobe.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          setItems((prev) => prev.filter((i) => i.id !== item.id));
+          try {
+            await deleteClothing(item.id);
+          } catch {
+            load();
+          }
+        },
+      },
+    ]);
+  }
+
+  // Categories that actually have items, in canonical order.
+  const usedCategories = useMemo(
+    () => CATEGORIES.filter((c) => items.some((i) => i.category === c.key)),
+    [items]
+  );
+  const shown = filter === 'all' ? items : items.filter((i) => i.category === filter);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm }}>
@@ -51,6 +80,25 @@ export default function Wardrobe() {
           {items.length > 0 ? t('wardrobe.count', { count: items.length }) : t('wardrobe.subtitle')}
         </Text>
       </View>
+
+      {items.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.screen, paddingVertical: spacing.md, gap: spacing.sm }}
+          style={{ flexGrow: 0 }}
+        >
+          <FilterChip label={t('wardrobe.all')} active={filter === 'all'} onPress={() => setFilter('all')} />
+          {usedCategories.map((c) => (
+            <FilterChip
+              key={c.key}
+              label={t(`category.${c.key}`)}
+              active={filter === c.key}
+              onPress={() => setFilter(c.key)}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
 
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -64,13 +112,13 @@ export default function Wardrobe() {
         />
       ) : (
         <FlatList
-          data={items}
+          data={shown}
           keyExtractor={(i) => i.id}
           numColumns={2}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 110 }}
           columnWrapperStyle={{ gap: spacing.md }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-          renderItem={({ item }) => <ClothingCard item={item} />}
+          renderItem={({ item }) => <ClothingCard item={item} onLongPress={() => onDelete(item)} />}
         />
       )}
 
@@ -95,12 +143,35 @@ export default function Wardrobe() {
   );
 }
 
-function ClothingCard({ item }: { item: Clothing }) {
+function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        paddingVertical: 8,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: active ? colors.primary : colors.border,
+        backgroundColor: active ? colors.primary : colors.surface,
+      }}
+    >
+      <Text style={[typography.caption, { color: active ? colors.primaryText : colors.textMuted }]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ClothingCard({ item, onLongPress }: { item: Clothing; onLongPress: () => void }) {
   const { colors } = useTheme();
   const { t } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
   return (
-    <View
+    <Pressable
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={{
         flex: 1,
         backgroundColor: colors.surface,
@@ -110,7 +181,10 @@ function ClothingCard({ item }: { item: Clothing }) {
         overflow: 'hidden',
       }}
     >
-      <Image source={{ uri }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="cover" />
+      {/* Light tile + contain so the full garment is visible (no cropping). */}
+      <View style={{ backgroundColor: '#FFFFFF', padding: spacing.sm }}>
+        <Image source={{ uri }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="contain" />
+      </View>
       <View style={{ padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         {item.dominant_color ? (
           <View
@@ -128,6 +202,6 @@ function ClothingCard({ item }: { item: Clothing }) {
           {t(categoryKey(item.category))}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }

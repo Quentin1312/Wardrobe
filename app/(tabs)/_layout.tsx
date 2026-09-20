@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { fonts, useTheme } from '@/constants/theme';
+import { fonts } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 
 export default function TabsLayout() {
