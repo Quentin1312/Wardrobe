@@ -72,6 +72,22 @@ export async function saveWornOutfit(input: {
   return data as Outfit;
 }
 
+/** The look the user validated today, if any — used to lock the studio. */
+export async function fetchTodaysWornOutfit(userId: string): Promise<Outfit | null> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const { data, error } = await supabase
+    .from('outfits')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('liked', true)
+    .gte('generated_at', startOfDay.toISOString())
+    .order('generated_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return ((data as Outfit[]) ?? [])[0] ?? null;
+}
+
 export async function setOutfitLiked(id: string, liked: boolean): Promise<void> {
   const { error } = await supabase.from('outfits').update({ liked }).eq('id', id);
   if (error) throw error;

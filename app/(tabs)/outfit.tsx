@@ -13,8 +13,8 @@ import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
 import { OutfitConfirmed } from '@/components/OutfitConfirmed';
-import { fetchClothes, markOutfitDirty } from '@/lib/clothes';
-import { generateOutfits, saveWornOutfit } from '@/lib/outfits';
+import { fetchClothes, markOutfitDirty, setClothingDirty } from '@/lib/clothes';
+import { fetchTodaysWornOutfit, generateOutfits, saveWornOutfit, setOutfitLiked } from '@/lib/outfits';
 import { generateTryOn } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { weatherContext } from '@/lib/weather';
@@ -49,6 +49,8 @@ export default function OutfitDay() {
   const [styled, setStyled] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmedItems, setConfirmedItems] = useState<Clothing[]>([]);
+  /** Non-null once today's look is validated: the studio becomes read-only. */
+  const [locked, setLocked] = useState<Clothing[] | null>(null);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -62,6 +64,23 @@ export default function OutfitDay() {
       setIdx(INITIAL_INDICES);
       setSaved(false);
       setSavedOutfitId(null);
+
+      // A look validated today locks the studio until the user changes it.
+      try {
+        const worn = await fetchTodaysWornOutfit(session.user.id);
+        if (worn) {
+          const byId = new Map(items.map((piece) => [piece.id, piece]));
+          const pieces = worn.clothes_ids
+            .map((pieceId) => byId.get(pieceId))
+            .filter((piece): piece is Clothing => Boolean(piece));
+          setLocked(pieces.length > 0 ? pieces : null);
+          setSavedOutfitId(worn.id);
+        } else {
+          setLocked(null);
+        }
+      } catch {
+        setLocked(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -72,9 +91,10 @@ export default function OutfitDay() {
   const hasRequired = REQUIRED.every((category) => buckets[category].length > 0);
 
   const current = useCallback((category: ClothingCategory): Clothing | null => {
+    if (locked) return locked.find((piece) => piece.category === category) ?? null;
     if (category === 'jacket' && idx.jacket < 0) return null;
     return buckets[category][idx[category]] ?? null;
-  }, [buckets, idx]);
+  }, [buckets, idx, locked]);
 
   // Jackets are excluded from the look for now.
   const selectedIds = useCallback(() => [
@@ -171,6 +191,21 @@ export default function OutfitDay() {
     return outfit.id;
   }
 
+  /** Undo today's validation: the look was not worn after all. */
+  async function unlock() {
+    const pieces = locked ?? [];
+    const outfitId = savedOutfitId;
+    setLocked(null);
+    resetSavedState();
+    try {
+      if (outfitId) await setOutfitLiked(outfitId, false);
+      await Promise.all(pieces.map((piece) => setClothingDirty(piece.id, false)));
+    } catch {
+      // best effort
+    }
+    load();
+  }
+
   async function validate() {
     const worn = (['top', 'bottom', 'shoes'] as ClothingCategory[])
       .map((category) => current(category))
@@ -188,6 +223,7 @@ export default function OutfitDay() {
     }
     setConfirmedItems(worn);
     setShowConfirm(true);
+    setLocked(worn);
   }
 
   async function runTryOn() {
@@ -213,7 +249,7 @@ export default function OutfitDay() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : !hasRequired ? (
+      ) : !locked && !hasRequired ? (
         <EmptyState
           icon="shirt-outline"
           title={t('outfitDay.needMoreTitle')}
@@ -244,17 +280,59 @@ export default function OutfitDay() {
                 </View>
               ) : null}
             </View>
-            <Text style={[typography.h1, { color: colors.text }]}>{t('outfitDay.title')}</Text>
-            <Text style={[typography.body, { color: colors.textMuted }]}>{t('outfitDay.subtitle')}</Text>
+            <Text style={[typography.h1, { color: colors.text }]}>
+              {locked ? t('outfitDay.lockedTitle') : t('outfitDay.title')}
+            </Text>
+            <Text style={[typography.body, { color: colors.textMuted }]}>
+              {locked ? t('outfitDay.lockedBody') : t('outfitDay.subtitle')}
+            </Text>
           </View>
 
           <OutfitStudio
             current={current}
             counts={counts}
+            locked={!!locked}
             onPrevious={(category) => cycle(category, -1)}
             onNext={(category) => cycle(category, 1)}
           />
 
+          {locked ? (
+            <View style={{ gap: spacing.md, alignItems: 'center' }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  paddingVertical: 10,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: radius.full,
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <Ionicons name="lock-closed" size={16} color={colors.success} />
+                <Text style={[typography.bodyStrong, { color: colors.success }]}>{t('outfitDay.wornToday')}</Text>
+              </View>
+              <Pressable
+                onPress={unlock}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  paddingHorizontal: spacing.lg,
+                  borderRadius: radius.full,
+                  borderWidth: 1,
+                  borderColor: colors.borderStrong,
+                  backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+                })}
+              >
+                <Ionicons name="refresh" size={16} color={colors.textMuted} />
+                <Text style={[typography.caption, { color: colors.textMuted }]}>{t('outfitDay.change')}</Text>
+              </Pressable>
+            </View>
+          ) : (
+          <>
           {saved ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="checkmark-circle" size={21} color={colors.success} />
@@ -361,6 +439,8 @@ export default function OutfitDay() {
               </Pressable>
             </View>
           </View>
+          </>
+          )}
         </ScrollView>
       )}
 

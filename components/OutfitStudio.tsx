@@ -13,6 +13,8 @@ interface OutfitStudioProps {
   counts: Record<ClothingCategory, number>;
   onPrevious: (category: ClothingCategory) => void;
   onNext: (category: ClothingCategory) => void;
+  /** Today's look is settled: show it, but don't let it be changed. */
+  locked?: boolean;
 }
 
 // Jackets are intentionally left out for now — they read badly stacked.
@@ -31,9 +33,9 @@ const INK_MUTED = 'rgba(32,29,24,0.55)';
 // Arrows float over the stage so the garments get the full width.
 const ARROW_GUTTER = 52;
 
-export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStudioProps) {
+export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: OutfitStudioProps) {
   const { t } = useLocale();
-  const rows = ROWS.filter((row) => counts[row.category] > 0);
+  const rows = ROWS.filter((row) => (locked ? current(row.category) : counts[row.category] > 0));
 
   return (
     <LinearGradient
@@ -49,6 +51,7 @@ export function OutfitStudio({ current, counts, onPrevious, onNext }: OutfitStud
           item={current(row.category)}
           label={t(categoryKey(row.category))}
           canCycle={counts[row.category] > 1}
+          hideArrows={locked}
           onPrevious={() => onPrevious(row.category)}
           onNext={() => onNext(row.category)}
         />
@@ -76,6 +79,7 @@ function GarmentRow({
   label,
   height,
   canCycle,
+  hideArrows,
   onPrevious,
   onNext,
 }: {
@@ -83,13 +87,14 @@ function GarmentRow({
   label: string;
   height: number;
   canCycle: boolean;
+  hideArrows?: boolean;
   onPrevious: () => void;
   onNext: () => void;
 }) {
   return (
     <View style={{ height, justifyContent: 'center' }}>
       {/* Garment takes the full stage width */}
-      <View style={{ paddingHorizontal: ARROW_GUTTER, height: '100%' }}>
+      <View style={{ paddingHorizontal: hideArrows ? spacing.lg : ARROW_GUTTER, height: '100%' }}>
         {item ? (
           <Image
             source={{ uri: item.photo_clean_url ?? item.photo_url }}
@@ -115,8 +120,12 @@ function GarmentRow({
         {label}
       </Text>
 
-      <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
-      <Arrow side="right" disabled={!canCycle} onPress={onNext} />
+      {hideArrows ? null : (
+        <>
+          <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
+          <Arrow side="right" disabled={!canCycle} onPress={onNext} />
+        </>
+      )}
     </View>
   );
 }

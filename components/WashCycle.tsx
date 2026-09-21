@@ -110,7 +110,8 @@ export function WashCycle({ visible, onDone }: { visible: boolean; onDone: () =>
 
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const translateX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-3.5, 3.5] });
-  const waterY = water.interpolate({ inputRange: [0, 1], outputRange: [DRUM * 0.62, DRUM * 0.18] });
+  // At 0 the water sits fully below the porthole, so the final check is clear of it.
+  const waterY = water.interpolate({ inputRange: [0, 1], outputRange: [DRUM, DRUM * 0.18] });
   const waveX = wave.interpolate({ inputRange: [-1, 1], outputRange: [-14, 14] });
   const doneScale = done.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
 
