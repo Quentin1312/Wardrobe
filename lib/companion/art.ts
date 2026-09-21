@@ -66,10 +66,6 @@ const dylan: CompanionArt = {
     { t: 'ellipse', cx: 143, cy: 188, rx: 13, ry: 6, fill: D.tan },
     // pear-shaped torso
     { t: 'path', d: 'M72 116 Q64 150 74 187 L126 187 Q136 150 128 116 Q100 102 72 116 Z', fill: D.charcoal },
-    // merle mottling
-    { t: 'ellipse', cx: 62, cy: 164, rx: 9, ry: 7, fill: D.merle },
-    { t: 'ellipse', cx: 138, cy: 160, rx: 8, ry: 10, fill: D.merleLight, opacity: 0.7 },
-    { t: 'ellipse', cx: 116, cy: 138, rx: 6, ry: 5, fill: D.merle },
     // front legs and paws
     // legs grow out of the shoulders in the body colour…
     { t: 'path', d: 'M75 130 Q71 164 77 184 Q87 193 98 185 Q100 160 99 136 Z', fill: D.charcoal },
@@ -81,9 +77,8 @@ const dylan: CompanionArt = {
     // small tan chest patch
     { t: 'path', d: 'M86 120 Q100 132 114 120 Q116 144 100 154 Q84 144 86 120 Z', fill: D.tan },
 
-    { t: 'ellipse', cx: 87, cy: 188, rx: 13, ry: 6.5, fill: D.tanLight },
-    { t: 'ellipse', cx: 113, cy: 188, rx: 13, ry: 6.5, fill: D.tanLight },
-    { t: 'path', d: 'M83 185 L83 191 M88 184 L88 191 M93 185 L93 191 M107 185 L107 191 M112 184 L112 191 M117 185 L117 191', stroke: D.tan, strokeWidth: 1.6 },
+    { t: 'path', d: 'M74 189 Q74 181 80.5 181 Q84 178 87 181 Q90 178 93.5 181 Q100 181 100 189 Q100 195 87 195 Q74 195 74 189 Z', fill: D.tanLight },
+    { t: 'path', d: 'M100 189 Q100 181 106.5 181 Q110 178 113 181 Q116 178 119.5 181 Q126 181 126 189 Q126 195 113 195 Q100 195 100 189 Z', fill: D.tanLight },
   ],
   neck: [100, 118],
   head: [
@@ -93,7 +88,7 @@ const dylan: CompanionArt = {
     { t: 'path', d: 'M142 70 Q145 42 136 24 Q120 32 108 52 Z', fill: D.black },
     { t: 'path', d: 'M136 62 Q138 44 132 33 Q122 41 115 53 Z', fill: D.earInner },
     // round head with small cheek fluff
-    { t: 'path', d: 'M100 40 C 130 40 148 60 148 84 C 154 90 152 102 144 104 C 138 118 120 126 100 126 C 80 126 62 118 56 104 C 48 102 46 90 52 84 C 52 60 70 40 100 40 Z', fill: D.black },
+    { t: 'path', d: 'M100 40 C 130 40 148 60 148 84 C 148 107 126 126 100 126 C 74 126 52 107 52 84 C 52 60 70 40 100 40 Z', fill: D.black },
     { t: 'path', d: 'M104 44 Q124 46 134 60 Q120 60 108 54 Z', fill: D.merle, opacity: 0.7 },
     // tan brows and cheeks
     { t: 'ellipse', cx: 82, cy: 66, rx: 6.5, ry: 4, fill: D.tanLight },
