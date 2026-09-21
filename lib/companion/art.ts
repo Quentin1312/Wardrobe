@@ -234,24 +234,25 @@ const noisette: CompanionArt = {
     // round haunches and long hind feet
     { t: 'ellipse', cx: 72, cy: 167, rx: 25, ry: 22, fill: R.fur },
     { t: 'ellipse', cx: 128, cy: 167, rx: 25, ry: 22, fill: R.fur },
-    { t: 'ellipse', cx: 60, cy: 188, rx: 18, ry: 6.5, fill: R.furLight },
-    { t: 'ellipse', cx: 140, cy: 188, rx: 18, ry: 6.5, fill: R.furLight },
+    { t: 'ellipse', cx: 56, cy: 188, rx: 22, ry: 7.5, fill: R.furLight },
+    { t: 'ellipse', cx: 144, cy: 188, rx: 22, ry: 7.5, fill: R.furLight },
     // torso and soft belly
     { t: 'path', d: 'M76 118 Q68 152 78 187 L122 187 Q132 152 124 118 Q100 104 76 118 Z', fill: R.fur },
     { t: 'path', d: 'M84 124 Q100 134 116 124 Q121 160 100 178 Q79 160 84 124 Z', fill: R.cream },
-    // little front paws held together
-    { t: 'ellipse', cx: 91, cy: 166, rx: 9.5, ry: 15, fill: R.fur },
-    { t: 'ellipse', cx: 109, cy: 166, rx: 9.5, ry: 15, fill: R.fur },
-    { t: 'ellipse', cx: 91, cy: 178, rx: 9, ry: 6, fill: R.furLight },
-    { t: 'ellipse', cx: 109, cy: 178, rx: 9, ry: 6, fill: R.furLight },
+    // front legs down from the chest to small rounded paws
+    { t: 'path', d: 'M83 144 Q80 168 82 184 Q90 191 98 184 Q100 164 98 146 Z', fill: R.furLight },
+    { t: 'path', d: 'M117 144 Q120 168 118 184 Q110 191 102 184 Q100 164 102 146 Z', fill: R.furLight },
+    { t: 'path', d: 'M100 150 L100 186', stroke: R.furDark, strokeWidth: 1.4, opacity: 0.5 },
+    { t: 'path', d: 'M80 185 Q80 178 86 178 Q90 176 94 178 Q99 179 99 185 Q99 191 89.5 191 Q80 191 80 185 Z', fill: R.cream },
+    { t: 'path', d: 'M120 185 Q120 178 114 178 Q110 176 106 178 Q101 179 101 185 Q101 191 110.5 191 Q120 191 120 185 Z', fill: R.cream },
   ],
   neck: [100, 118],
   head: [
     // long ears with pink insides
-    { t: 'path', d: 'M79 62 Q64 12 79 4 Q95 11 93 60 Z', fill: R.fur },
-    { t: 'path', d: 'M81 55 Q71 20 80 12 Q89 19 88 55 Z', fill: R.pink },
-    { t: 'path', d: 'M121 62 Q136 12 121 4 Q105 11 107 60 Z', fill: R.fur },
-    { t: 'path', d: 'M119 55 Q129 20 120 12 Q111 19 112 55 Z', fill: R.pink },
+    { t: 'path', d: 'M74 66 C 56 42 52 8 69 1 C 88 3 97 34 96 62 Z', fill: R.fur },
+    { t: 'path', d: 'M78 59 C 64 40 62 14 70 9 C 83 12 89 35 89 58 Z', fill: R.pink },
+    { t: 'path', d: 'M126 66 C 144 42 148 8 131 1 C 112 3 103 34 104 62 Z', fill: R.fur },
+    { t: 'path', d: 'M122 59 C 136 40 138 14 130 9 C 117 12 111 35 111 58 Z', fill: R.pink },
     // head
     { t: 'path', d: 'M100 46 C 128 46 145 64 145 86 C 145 109 125 125 100 125 C 75 125 55 109 55 86 C 55 64 72 46 100 46 Z', fill: R.fur },
     { t: 'path', d: 'M92 50 Q100 46 108 50 Q104 58 100 60 Q96 58 92 50 Z', fill: R.furDark, opacity: 0.35 },
