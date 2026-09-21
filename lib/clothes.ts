@@ -15,6 +15,7 @@ export async function addClothing(input: {
   userId: string;
   photoUrl: string;
   category: ClothingCategory;
+  name?: string | null;
   dominantColor?: string | null;
   styleTags?: string[];
 }): Promise<Clothing> {
@@ -23,6 +24,7 @@ export async function addClothing(input: {
     .insert({
       user_id: input.userId,
       photo_url: input.photoUrl,
+      name: input.name?.trim() || null,
       category: input.category,
       dominant_color: input.dominantColor ?? null,
       style_tags: input.styleTags ?? [],
@@ -53,6 +55,11 @@ export async function renameClothing(id: string, name: string): Promise<void> {
 
 export async function setClothingFavorite(id: string, favorite: boolean): Promise<void> {
   const { error } = await supabase.from('clothes').update({ favorite }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function setClothingColor(id: string, hex: string): Promise<void> {
+  const { error } = await supabase.from('clothes').update({ dominant_color: hex }).eq('id', id);
   if (error) throw error;
 }
 

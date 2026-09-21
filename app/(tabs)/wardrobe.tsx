@@ -11,10 +11,14 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { cleanMissingBackgrounds, fetchClothes, washAll } from '@/lib/clothes';
+import { cleanMissingBackgrounds, fetchClothes, setClothingColor, washAll } from '@/lib/clothes';
+import { colorName, extractDominantColor } from '@/lib/color';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
 type Filter = ClothingCategory | 'all' | 'fav' | 'dirty';
+
+// Pieces whose colour we already tried to read this session (don't retry forever).
+const colorAttempted = new Set<string>();
 
 export default function Wardrobe() {
   const { colors } = useTheme();
@@ -32,10 +36,28 @@ export default function Wardrobe() {
   const [cleanProgress, setCleanProgress] = useState({ done: 0, total: 0 });
   const [cleanMessage, setCleanMessage] = useState<string | null>(null);
 
+  /** One-off: read the colour of pieces added before colour detection existed. */
+  async function backfillColors(list: Clothing[]) {
+    for (const piece of list) {
+      if (piece.dominant_color || colorAttempted.has(piece.id)) continue;
+      colorAttempted.add(piece.id);
+      const hex = await extractDominantColor(piece.photo_url, piece.id);
+      if (!hex) continue;
+      try {
+        await setClothingColor(piece.id, hex);
+        setItems((prev) => prev.map((p) => (p.id === piece.id ? { ...p, dominant_color: hex } : p)));
+      } catch {
+        // stays uncoloured; the stylist copes without it
+      }
+    }
+  }
+
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      setItems(await fetchClothes(userId));
+      const fetched = await fetchClothes(userId);
+      setItems(fetched);
+      backfillColors(fetched);
     } catch {
       // empty state covers it
     } finally {
@@ -328,7 +350,7 @@ function Chip({
 
 function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }) {
   const { colors } = useTheme();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
 
   return (
@@ -396,9 +418,24 @@ function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }
         <Text numberOfLines={1} style={[typography.bodyStrong, { color: colors.text }]}>
           {item.name ?? t(categoryKey(item.category))}
         </Text>
-        <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted }]}>
-          {t(categoryKey(item.category))}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          {item.dominant_color ? (
+            <View
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: item.dominant_color,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            />
+          ) : null}
+          <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, flexShrink: 1 }]}>
+            {t(categoryKey(item.category))}
+            {item.dominant_color ? ` · ${colorName(item.dominant_color, locale) ?? ''}` : ''}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );

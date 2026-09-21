@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LaundryDrop } from '@/components/LaundryDrop';
 import { categoryKey } from '@/constants/categories';
+import { colorName } from '@/lib/color';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -259,6 +260,13 @@ export default function ItemSheet() {
         {/* Meta */}
         <View style={{ gap: spacing.sm }}>
           <Row label={t('item.category')} value={t(categoryKey(item.category))} />
+          {item.dominant_color ? (
+            <Row
+              label={t('item.color')}
+              value={colorName(item.dominant_color, locale) ?? item.dominant_color}
+              swatch={item.dominant_color}
+            />
+          ) : null}
           <Row label={t('item.addedOn')} value={added} />
         </View>
 
@@ -310,7 +318,7 @@ export default function ItemSheet() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, swatch }: { label: string; value: string; swatch?: string }) {
   const { colors } = useTheme();
   return (
     <View
@@ -325,7 +333,12 @@ function Row({ label, value }: { label: string; value: string }) {
       }}
     >
       <Text style={[typography.small, { color: colors.textMuted }]}>{label}</Text>
-      <Text style={[typography.bodyStrong, { color: colors.text }]}>{value}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {swatch ? (
+          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: swatch, borderWidth: 1, borderColor: colors.border }} />
+        ) : null}
+        <Text style={[typography.bodyStrong, { color: colors.text }]}>{value}</Text>
+      </View>
     </View>
   );
 }
