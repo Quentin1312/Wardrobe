@@ -1,8 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import type { Clothing, Outfit } from '@/lib/types';
 
-export interface SuggestedOutfit extends Outfit {
-  rationale?: string;
+export type SuggestedOutfit = Outfit;
+
+export interface WeekPlanDayInput {
+  date: string;
+  weather: { temp: number; condition: string } | null;
 }
 
 /** Calls the Groq-powered edge function to generate fresh outfit suggestions. */
@@ -35,6 +38,51 @@ export async function generateOutfits(weather: {
   // Never resolve silently empty — the caller should always get a signal.
   if (outfits.length === 0) return { outfits: [], error: 'empty' };
   return { outfits };
+}
+
+/** Generates and persists one dated look per requested day in a single AI call. */
+export async function generateWeeklyOutfits(
+  days: WeekPlanDayInput[]
+): Promise<{ outfits: SuggestedOutfit[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('suggest-outfits', {
+    body: { mode: 'week', days },
+  });
+  if (error) {
+    let detail = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) detail = body.error;
+    } catch {
+      // keep the generic message
+    }
+    return { outfits: [], error: detail };
+  }
+  if (data?.error && (!data.outfits || data.outfits.length === 0)) {
+    return { outfits: [], error: data.error };
+  }
+  const outfits = (data?.outfits ?? []) as SuggestedOutfit[];
+  if (outfits.length === 0) return { outfits: [], error: 'empty' };
+  return { outfits };
+}
+
+/** Latest saved weekly look for each requested date. */
+export async function fetchWeeklyOutfits(userId: string, dates: string[]): Promise<SuggestedOutfit[]> {
+  if (dates.length === 0) return [];
+  const { data, error } = await supabase
+    .from('outfits')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('plan_scope', 'week')
+    .in('planned_for', dates)
+    .order('generated_at', { ascending: false });
+  if (error) throw error;
+
+  const seen = new Set<string>();
+  return ((data as SuggestedOutfit[]) ?? []).filter((outfit) => {
+    if (!outfit.planned_for || seen.has(outfit.planned_for)) return false;
+    seen.add(outfit.planned_for);
+    return true;
+  });
 }
 
 /** Today's already-generated outfits, newest first. */

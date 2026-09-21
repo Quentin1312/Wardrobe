@@ -14,10 +14,11 @@ import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
 import { OutfitConfirmed } from '@/components/OutfitConfirmed';
 import { fetchClothes, markOutfitDirty, setClothingDirty } from '@/lib/clothes';
-import { fetchTodaysWornOutfit, generateOutfits, saveWornOutfit, setOutfitLiked } from '@/lib/outfits';
+import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked } from '@/lib/outfits';
 import { generateTryOn } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { weatherContext } from '@/lib/weather';
+import { dateKey } from '@/lib/week';
 
 const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
 const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket'];
@@ -27,6 +28,15 @@ type Indices = Record<ClothingCategory, number>;
 
 function emptyBuckets(): Buckets {
   return { top: [], bottom: [], shoes: [], jacket: [], accessory: [] };
+}
+
+function indicesForIds(buckets: Buckets, ids: string[]): Indices {
+  const indices = { ...INITIAL_INDICES };
+  for (const category of REQUIRED) {
+    const position = buckets[category].findIndex((piece) => ids.includes(piece.id));
+    if (position >= 0) indices[category] = position;
+  }
+  return indices;
 }
 
 const INITIAL_INDICES: Indices = { top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: 0 };
@@ -77,6 +87,8 @@ export default function OutfitDay() {
           setSavedOutfitId(worn.id);
         } else {
           setLocked(null);
+          const [planned] = await fetchWeeklyOutfits(session.user.id, [dateKey(new Date())]);
+          if (planned) setIdx(indicesForIds(next, planned.clothes_ids));
         }
       } catch {
         setLocked(null);
@@ -404,7 +416,7 @@ export default function OutfitDay() {
               })}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="sparkles" size={20} color={colors.energy} />
+                <Ionicons name="body-outline" size={20} color={colors.energy} />
                 <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.cta')}</Text>
               </View>
               <Ionicons name="arrow-forward" size={20} color={colors.primaryText} />

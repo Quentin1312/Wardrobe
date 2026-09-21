@@ -11,6 +11,14 @@ export interface Weather {
   icon: keyof typeof Ionicons.glyphMap;
 }
 
+export interface DailyForecast {
+  date: string;
+  temp: number;
+  condition: string;
+  main: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
 const OWM_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_KEY;
 
 // Map OpenWeatherMap "main" groups to Ionicons.
@@ -66,6 +74,44 @@ export async function fetchWeather(
     main,
     icon: iconFor(main),
   };
+}
+
+/** OpenWeather's free five-day forecast, reduced to one midday reading per day. */
+export async function fetchForecast(
+  lat: number,
+  lon: number,
+  lang = 'en'
+): Promise<DailyForecast[]> {
+  if (!OWM_KEY) return [];
+  const url =
+    `https://api.openweathermap.org/data/2.5/forecast` +
+    `?lat=${lat}&lon=${lon}&units=metric&lang=${lang}&appid=${OWM_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  const offsetSeconds = Number(data.city?.timezone ?? 0);
+  const best = new Map<string, { distance: number; forecast: DailyForecast }>();
+
+  for (const reading of data.list ?? []) {
+    const local = new Date((Number(reading.dt) + offsetSeconds) * 1000);
+    const date = local.toISOString().slice(0, 10);
+    const hour = local.getUTCHours();
+    const main = reading.weather?.[0]?.main ?? 'Clouds';
+    const candidate = {
+      distance: Math.abs(hour - 12),
+      forecast: {
+        date,
+        temp: Math.round(reading.main?.temp ?? 0),
+        condition: reading.weather?.[0]?.description ?? '',
+        main,
+        icon: iconFor(main),
+      },
+    };
+    if (!best.has(date) || candidate.distance < best.get(date)!.distance) best.set(date, candidate);
+  }
+
+  return [...best.values()].map((entry) => entry.forecast).slice(0, 5);
 }
 
 /** Short human summary used later as outfit-suggestion context. */

@@ -145,7 +145,7 @@ export function TryOnSheet({
                     gap: spacing.sm,
                   })}
                 >
-                  <Ionicons name="sparkles" size={19} color={colors.energy} />
+                  <Ionicons name="body-outline" size={19} color={colors.energy} />
                   <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.consent')}</Text>
                 </Pressable>
                 {!modelPhoto ? (

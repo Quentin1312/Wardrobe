@@ -184,7 +184,7 @@ export default function Wardrobe() {
                     <ActivityIndicator size="small" color={colors.accent} />
                   ) : (
                     <Ionicons
-                      name={pendingCleanCount > 0 ? 'sparkles-outline' : 'checkmark-circle'}
+                      name={pendingCleanCount > 0 ? 'cut-outline' : 'checkmark-circle'}
                       size={18}
                       color={pendingCleanCount > 0 ? colors.accent : colors.success}
                     />

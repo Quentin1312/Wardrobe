@@ -5,7 +5,8 @@
 // Deploy:  supabase functions deploy suggest-outfits
 // Secret:  supabase secrets set GROQ_API_KEY=xxx
 //
-// The client sends: { weather: { temp: number, condition: string }, count?: number }
+// The client sends either a day request or
+// { mode: 'week', days: [{ date: 'YYYY-MM-DD', weather: {...} | null }] }.
 // and its user JWT in the Authorization header.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) return json({ error: 'Unauthorized' }, 401);
     const userId = userData.user.id;
 
-    const { weather, count = 3 } = await req.json().catch(() => ({}));
+    const { weather, count = 3, mode = 'day', days = [] } = await req.json().catch(() => ({}));
 
     // Dirty laundry is not available to wear today.
     const { data: clothes, error: clothesErr } = await supabase
@@ -70,6 +71,13 @@ Deno.serve(async (req) => {
       ? `${weather.temp}°C, ${weather.condition}`
       : 'inconnue';
 
+    const weekDays = Array.isArray(days)
+      ? days
+          .filter((day) => typeof day?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.date))
+          .slice(0, 7)
+      : [];
+    const isWeek = mode === 'week' && weekDays.length > 0;
+
     const catalog = items
       .map(
         (c) =>
@@ -79,18 +87,28 @@ Deno.serve(async (req) => {
       )
       .join('\n');
 
+    const assignment = isWeek
+      ? `Planifie exactement une tenue pour chacun de ces jours :\n${weekDays
+          .map((day) => `- ${day.date} : ${day.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : 'météo inconnue'}`)
+          .join('\n')}\n\nDiversifie la semaine et évite de réutiliser les mêmes pièces quand la garde-robe le permet.`
+      : `Météo du jour : ${weatherLine}.\n\nCompose ${Math.min(Number(count) || 3, 7)} tenues cohérentes et adaptées à la météo.`;
+
+    const outputShape = isWeek
+      ? '{"outfits":[{"planned_for":"YYYY-MM-DD","clothes_ids":["id1","id2"],"rationale":"courte explication en français"}]}'
+      : '{"outfits":[{"clothes_ids":["id1","id2"],"rationale":"courte explication en français"}]}';
+
     const prompt = `Tu es un styliste. Voici la garde-robe d'un utilisateur :
 ${catalog}
 
-Météo du jour : ${weatherLine}.
+${assignment}
 
-Compose ${count} tenues cohérentes et adaptées à la météo. Chaque tenue doit
+Chaque tenue doit
 combiner idéalement un haut + un bas + des chaussures, et éventuellement une
 veste ou un accessoire s'ils conviennent. N'utilise QUE les id fournis ci-dessus.
 Vérifie la compatibilité des couleurs et la cohérence de style.
 
 Réponds STRICTEMENT en JSON avec ce format :
-{"outfits":[{"clothes_ids":["id1","id2"],"rationale":"courte explication en français"}]}`;
+${outputShape}`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -116,7 +134,7 @@ Réponds STRICTEMENT en JSON avec ce format :
 
     const groqData = await groqRes.json();
     const content = groqData.choices?.[0]?.message?.content ?? '{}';
-    let parsed: { outfits?: { clothes_ids: string[]; rationale?: string }[] };
+    let parsed: { outfits?: { planned_for?: string; clothes_ids: string[]; rationale?: string }[] };
     try {
       parsed = JSON.parse(content);
     } catch {
@@ -124,24 +142,51 @@ Réponds STRICTEMENT en JSON avec ce format :
     }
 
     const validIds = new Set(items.map((i) => i.id));
+    const requestedDates = new Set(weekDays.map((day) => day.date));
     const suggestions = (parsed.outfits ?? [])
       // Keep only outfits whose ids all exist in the wardrobe.
       .map((o) => ({
+        planned_for: isWeek && requestedDates.has(o.planned_for ?? '') ? o.planned_for! : null,
         clothes_ids: (o.clothes_ids ?? []).filter((id) => validIds.has(id)),
         rationale: o.rationale ?? '',
       }))
-      .filter((o) => o.clothes_ids.length >= 2)
-      .slice(0, count);
+      .filter((o) => o.clothes_ids.length >= 2 && (!isWeek || o.planned_for));
 
-    if (suggestions.length === 0) {
+    const uniqueSuggestions = isWeek
+      ? suggestions.filter(
+          (suggestion, index, all) =>
+            all.findIndex((candidate) => candidate.planned_for === suggestion.planned_for) === index
+        )
+      : suggestions.slice(0, Math.min(Number(count) || 3, 7));
+
+    if (uniqueSuggestions.length === 0) {
       return json({ error: 'no_valid_outfit', outfits: [] }, 200);
     }
 
+    if (isWeek) {
+      const dates = uniqueSuggestions.map((suggestion) => suggestion.planned_for!);
+      const { error: deleteErr } = await supabase
+        .from('outfits')
+        .delete()
+        .eq('user_id', userId)
+        .eq('plan_scope', 'week')
+        .in('planned_for', dates);
+      if (deleteErr) return json({ error: deleteErr.message }, 500);
+    }
+
     // Persist each suggested outfit.
-    const rows = suggestions.map((s) => ({
+    const rows = uniqueSuggestions.map((s) => ({
       user_id: userId,
       clothes_ids: s.clothes_ids,
-      weather_context: weatherLine,
+      weather_context: isWeek
+        ? (() => {
+            const day = weekDays.find((candidate) => candidate.date === s.planned_for);
+            return day?.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : null;
+          })()
+        : weatherLine,
+      plan_scope: isWeek ? 'week' : 'day',
+      planned_for: isWeek ? s.planned_for : null,
+      rationale: s.rationale,
     }));
     const { data: inserted, error: insertErr } = await supabase
       .from('outfits')
@@ -152,7 +197,7 @@ Réponds STRICTEMENT en JSON avec ce format :
     // Attach rationale back to the persisted rows (by order).
     const outfits = (inserted ?? []).map((row, i) => ({
       ...row,
-      rationale: suggestions[i]?.rationale ?? '',
+      rationale: uniqueSuggestions[i]?.rationale ?? '',
     }));
 
     return json({ outfits });

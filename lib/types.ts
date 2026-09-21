@@ -40,6 +40,9 @@ export interface Outfit {
   generated_at: string;
   weather_context: string | null; // temp + condition at generation time
   liked: boolean | null; // true / false / null
+  planned_for: string | null; // YYYY-MM-DD when this look belongs to a weekly plan
+  plan_scope: 'day' | 'week';
+  rationale: string | null;
 }
 
 export interface TryonResult {

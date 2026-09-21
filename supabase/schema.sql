@@ -44,9 +44,15 @@ create table if not exists public.outfits (
   clothes_ids      uuid[] not null default '{}',
   weather_context  text,                       -- temp + condition at generation time
   liked            boolean,                    -- true / false / null (unrated)
+  planned_for      date,
+  plan_scope       text not null default 'day' check (plan_scope in ('day', 'week')),
+  rationale        text,
   generated_at     timestamptz not null default now()
 );
 create index if not exists outfits_user_id_idx on public.outfits(user_id);
+create index if not exists outfits_week_plan_idx
+  on public.outfits(user_id, planned_for, generated_at desc)
+  where plan_scope = 'week' and planned_for is not null;
 
 -- ---------- tryon_results ----------
 create table if not exists public.tryon_results (

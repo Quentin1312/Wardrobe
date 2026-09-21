@@ -57,7 +57,7 @@ export function OutfitCard({
               </View>
             ))}
           </View>
-          <Ionicons name="sparkles" size={18} color={colors.accent} />
+          <Ionicons name="color-wand-outline" size={18} color={colors.accent} />
         </View>
 
         {outfit.rationale ? (

@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +13,9 @@ import { useWeather } from '@/hooks/useWeather';
 import { CompanionCard } from '@/components/companion/CompanionCard';
 import type { Weather } from '@/lib/weather';
 import type { Locale } from '@/lib/i18n';
+import { clothesMap, fetchWeeklyOutfits, generateWeeklyOutfits, type SuggestedOutfit } from '@/lib/outfits';
+import type { Clothing } from '@/lib/types';
+import { nextSevenDays } from '@/lib/week';
 
 function greetingKey(): string {
   const h = new Date().getHours();
@@ -33,6 +38,66 @@ export default function Today() {
   const { t, locale } = useLocale();
   const { state } = useWeather();
   const router = useRouter();
+  const [mode, setMode] = useState<'day' | 'week'>('day');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [weekOutfits, setWeekOutfits] = useState<SuggestedOutfit[]>([]);
+  const [clothes, setClothes] = useState<Map<string, Clothing>>(() => new Map());
+  const [generatingWeek, setGeneratingWeek] = useState(false);
+  const [weekError, setWeekError] = useState<string | null>(null);
+  const userId = profile?.id ?? null;
+  const weekDays = useMemo(
+    () => nextSevenDays(
+      locale,
+      state.status === 'ready' ? state.weather : null,
+      state.status === 'ready' ? state.forecast : []
+    ),
+    [locale, state]
+  );
+  const dateList = weekDays.map((day) => day.date).join(',');
+
+  const loadWeek = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const dates = dateList.split(',').filter(Boolean);
+      const [saved, map] = await Promise.all([
+        fetchWeeklyOutfits(userId, dates),
+        clothesMap(userId),
+      ]);
+      setWeekOutfits(saved);
+      setClothes(map);
+      setWeekError(null);
+      setSelectedDate((current) => current || dates[0] || '');
+    } catch {
+      setWeekError(t('week.loadError'));
+    }
+  }, [dateList, userId, t]);
+
+  useFocusEffect(useCallback(() => { loadWeek(); }, [loadWeek]));
+
+  async function generateWeek() {
+    setGeneratingWeek(true);
+    setWeekError(null);
+    try {
+      const { outfits, error } = await generateWeeklyOutfits(
+        weekDays.map((day) => ({
+          date: day.date,
+          weather: day.weather ? { temp: day.weather.temp, condition: day.weather.condition } : null,
+        }))
+      );
+      if (error) {
+        setWeekError(error === 'not_enough_items' ? t('today.tooFewBody') : t('week.generateError'));
+        return;
+      }
+      setWeekOutfits(outfits);
+      // Pieces may have been added since the list was loaded.
+      if (userId) setClothes(await clothesMap(userId));
+      if (outfits[0]?.planned_for) setSelectedDate(outfits[0].planned_for);
+    } catch {
+      setWeekError(t('week.generateError'));
+    } finally {
+      setGeneratingWeek(false);
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -88,6 +153,22 @@ export default function Today() {
           weatherMain={state.status === 'ready' ? state.weather.main : null}
         />
 
+        <View
+          style={{
+            flexDirection: 'row',
+            padding: 4,
+            borderRadius: radius.full,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <ModeButton label={t('today.dayTab')} selected={mode === 'day'} onPress={() => setMode('day')} />
+          <ModeButton label={t('today.weekTab')} selected={mode === 'week'} onPress={() => setMode('week')} />
+        </View>
+
+        {mode === 'day' ? (
+          <>
         {/* Weather */}
         {state.status === 'loading' ? (
           <View
@@ -135,8 +216,41 @@ export default function Today() {
             <Ionicons name="arrow-forward" size={18} color={colors.accent} />
           </View>
         </Pressable>
+          </>
+        ) : (
+          <WeeklyPlanner
+            days={weekDays}
+            selectedDate={selectedDate || weekDays[0]?.date || ''}
+            outfits={weekOutfits}
+            clothes={clothes}
+            generating={generatingWeek}
+            error={weekError}
+            onSelectDate={setSelectedDate}
+            onGenerate={generateWeek}
+            onOpenToday={() => router.push('/(tabs)/outfit')}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ModeButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        minHeight: 42,
+        borderRadius: radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: selected ? colors.text : 'transparent',
+      }}
+    >
+      <Text style={[typography.button, { color: selected ? colors.bg : colors.textMuted }]}>{label}</Text>
+    </Pressable>
   );
 }
 

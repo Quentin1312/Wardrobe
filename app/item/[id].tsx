@@ -271,7 +271,7 @@ export default function ItemSheet() {
             tint={item.favorite ? colors.energy : undefined}
           />
           <ActionRow
-            icon={item.dirty ? 'sparkles-outline' : 'water-outline'}
+            icon={item.dirty ? 'checkmark-circle-outline' : 'water-outline'}
             label={item.dirty ? t('laundry.markClean') : t('laundry.markDirty')}
             onPress={onToggleDirty}
           />
