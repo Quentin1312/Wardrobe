@@ -70,13 +70,17 @@ const dylan: CompanionArt = {
     { t: 'ellipse', cx: 62, cy: 164, rx: 9, ry: 7, fill: D.merle },
     { t: 'ellipse', cx: 138, cy: 160, rx: 8, ry: 10, fill: D.merleLight, opacity: 0.7 },
     { t: 'ellipse', cx: 116, cy: 138, rx: 6, ry: 5, fill: D.merle },
+    // front legs and paws
+    // legs grow out of the shoulders in the body colour…
+    { t: 'path', d: 'M75 130 Q71 164 77 184 Q87 193 98 185 Q100 160 99 136 Z', fill: D.charcoal },
+    { t: 'path', d: 'M101 136 Q100 160 102 185 Q113 193 123 184 Q129 164 125 130 Z', fill: D.charcoal },
+    // …and turn tan lower down, like socks
+    { t: 'path', d: 'M76 160 Q75 176 77 184 Q87 193 98 185 Q99 171 98 160 Q87 165 76 160 Z', fill: D.tan },
+    { t: 'path', d: 'M102 160 Q101 171 102 185 Q113 193 123 184 Q125 176 124 160 Q113 165 102 160 Z', fill: D.tan },
+    { t: 'path', d: 'M100 142 L100 186', stroke: D.black, strokeWidth: 1.6, opacity: 0.6 },
     // small tan chest patch
     { t: 'path', d: 'M86 120 Q100 132 114 120 Q116 144 100 154 Q84 144 86 120 Z', fill: D.tan },
-    // front legs and paws
-    { t: 'path', d: 'M79 144 Q75 166 77 184 Q87 193 98 185 Q100 164 99 144 Z', fill: D.tan },
-    { t: 'path', d: 'M101 144 Q100 164 102 185 Q113 193 123 184 Q125 166 121 144 Z', fill: D.tan },
-    // soft shading between the legs
-    { t: 'path', d: 'M99 162 Q100 175 100 186 Q100 175 101 162 Z', fill: D.charcoal, opacity: 0.35 },
+
     { t: 'ellipse', cx: 87, cy: 188, rx: 13, ry: 6.5, fill: D.tanLight },
     { t: 'ellipse', cx: 113, cy: 188, rx: 13, ry: 6.5, fill: D.tanLight },
     { t: 'path', d: 'M83 185 L83 191 M88 184 L88 191 M93 185 L93 191 M107 185 L107 191 M112 184 L112 191 M117 185 L117 191', stroke: D.tan, strokeWidth: 1.6 },
