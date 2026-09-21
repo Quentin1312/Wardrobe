@@ -86,7 +86,7 @@ export async function deleteClothing(id: string): Promise<void> {
 /** Removes the background of a clothing photo (remove.bg edge function). */
 export async function removeBackground(
   clothingId: string
-): Promise<{ url?: string; error?: string }> {
+): Promise<{ url?: string; error?: string; cached?: boolean }> {
   const { data, error } = await supabase.functions.invoke('remove-background', {
     body: { clothingId },
   });
@@ -101,5 +101,28 @@ export async function removeBackground(
     return { error: detail };
   }
   if (data?.error) return { error: data.error };
-  return { url: data?.url as string };
+  return { url: data?.url as string, cached: Boolean(data?.cached) };
+}
+
+/**
+ * One-time cleanup for items created before automatic background removal.
+ * Requests are deliberately sequential to avoid burning provider credits in a
+ * burst or hitting the provider's rate limit.
+ */
+export async function cleanMissingBackgrounds(
+  items: Clothing[],
+  onProgress?: (done: number, total: number) => void
+): Promise<{ cleaned: number; failed: number }> {
+  const pending = items.filter((item) => !item.photo_clean_url);
+  let cleaned = 0;
+  let failed = 0;
+
+  for (const item of pending) {
+    const result = await removeBackground(item.id);
+    if (result.error) failed += 1;
+    else cleaned += 1;
+    onProgress?.(cleaned + failed, pending.length);
+  }
+
+  return { cleaned, failed };
 }

@@ -59,7 +59,6 @@
       "expo-localization"
     ],
     "experiments": {
-      "typedRoutes": true,
       "baseUrl": "/Wardrobe"
     },
     "extra": {

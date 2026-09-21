@@ -178,14 +178,19 @@ export default function OutfitDay() {
     }
   }
 
-  async function persistCurrentOutfit() {
+  async function persistCurrentOutfit(liked: boolean) {
     if (!session?.user) throw new Error(t('common.error'));
-    if (savedOutfitId) return savedOutfitId;
+    if (savedOutfitId) {
+      // A try-on draft only becomes today's worn look after the explicit
+      // "Wear it" action.
+      if (liked) await setOutfitLiked(savedOutfitId, true);
+      return savedOutfitId;
+    }
     const outfit = await saveWornOutfit({
       userId: session.user.id,
       clothesIds: selectedIds(),
       weatherContext: weather ? weatherContext(weather) : null,
-      liked: true,
+      liked,
     });
     setSavedOutfitId(outfit.id);
     return outfit.id;
@@ -211,7 +216,7 @@ export default function OutfitDay() {
       .map((category) => current(category))
       .filter((piece): piece is Clothing => Boolean(piece));
 
-    await persistCurrentOutfit();
+    await persistCurrentOutfit(true);
     setSaved(true);
 
     // Worn today: quietly flag the pieces in the wardrobe. They only reach the
@@ -227,7 +232,9 @@ export default function OutfitDay() {
   }
 
   async function runTryOn() {
-    const outfitId = await persistCurrentOutfit();
+    // The rendering service needs an outfit row, but this is only a draft:
+    // trying clothes on must never lock them as today's worn look.
+    const outfitId = await persistCurrentOutfit(false);
     const result = await generateTryOn(outfitId);
     if (!result.url) throw new Error(result.error ?? t('tryon.error'));
     return result.url;

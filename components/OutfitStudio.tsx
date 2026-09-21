@@ -17,11 +17,20 @@ interface OutfitStudioProps {
   locked?: boolean;
 }
 
-// Jackets are intentionally left out for now — they read badly stacked.
-const ROWS: { category: ClothingCategory; height: number }[] = [
-  { category: 'top', height: 206 },
-  { category: 'bottom', height: 228 },
-  { category: 'shoes', height: 132 },
+// A shared silhouette gives the cut-outs one body and one perspective. This is
+// intentionally a polished 2.5D lookboard rather than fake 3D rotation.
+const STAGE_HEIGHT = 590;
+const LAYERS: {
+  category: ClothingCategory;
+  top: number;
+  height: number;
+  width: `${number}%`;
+  zIndex: number;
+  shadowWidth: number;
+}[] = [
+  { category: 'bottom', top: 205, height: 278, width: '63%', zIndex: 2, shadowWidth: 120 },
+  { category: 'top', top: 28, height: 238, width: '74%', zIndex: 3, shadowWidth: 170 },
+  { category: 'shoes', top: 452, height: 116, width: '62%', zIndex: 4, shadowWidth: 190 },
 ];
 
 // Mid-tone sand stage: both dark and light garments stay readable, and it
@@ -30,30 +39,45 @@ const STAGE_TOP = '#D3CDC2';
 const STAGE_BOTTOM = '#B4AC9E';
 const INK_MUTED = 'rgba(32,29,24,0.55)';
 
-// Arrows float over the stage so the garments get the full width.
-const ARROW_GUTTER = 52;
-
 export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: OutfitStudioProps) {
   const { t } = useLocale();
-  const rows = ROWS.filter((row) => (locked ? current(row.category) : counts[row.category] > 0));
+  const layers = LAYERS.filter((layer) =>
+    locked ? current(layer.category) : counts[layer.category] > 0
+  );
 
   return (
     <LinearGradient
       colors={[STAGE_TOP, STAGE_BOTTOM]}
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
-      style={{ borderRadius: 28, overflow: 'hidden', paddingVertical: spacing.lg }}
+      style={{ height: STAGE_HEIGHT, borderRadius: 32, overflow: 'hidden' }}
     >
-      {rows.map((row) => (
-        <GarmentRow
-          key={row.category}
-          height={row.height}
-          item={current(row.category)}
-          label={t(categoryKey(row.category))}
-          canCycle={counts[row.category] > 1}
+      {/* Quiet body/spotlight: the three cut-outs now read as one look. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.04)']}
+        style={{
+          position: 'absolute',
+          top: 22,
+          bottom: 24,
+          left: '18%',
+          right: '18%',
+          borderRadius: 220,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.16)',
+        }}
+      />
+
+      {layers.map((layer) => (
+        <GarmentLayer
+          key={layer.category}
+          {...layer}
+          item={current(layer.category)}
+          label={t(categoryKey(layer.category))}
+          canCycle={counts[layer.category] > 1}
           hideArrows={locked}
-          onPrevious={() => onPrevious(row.category)}
-          onNext={() => onNext(row.category)}
+          onPrevious={() => onPrevious(layer.category)}
+          onNext={() => onNext(layer.category)}
         />
       ))}
 
@@ -61,23 +85,28 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
       <View
         pointerEvents="none"
         style={{
+          position: 'absolute',
           alignSelf: 'center',
+          bottom: 16,
           width: 210,
           height: 14,
           borderRadius: radius.full,
-          backgroundColor: 'rgba(32,29,24,0.16)',
+          backgroundColor: 'rgba(32,29,24,0.2)',
           transform: [{ scaleY: 0.4 }],
-          marginTop: spacing.sm,
         }}
       />
     </LinearGradient>
   );
 }
 
-function GarmentRow({
+function GarmentLayer({
   item,
   label,
+  top,
   height,
+  width,
+  zIndex,
+  shadowWidth,
   canCycle,
   hideArrows,
   onPrevious,
@@ -85,22 +114,48 @@ function GarmentRow({
 }: {
   item: Clothing | null;
   label: string;
+  top: number;
   height: number;
+  width: `${number}%`;
+  zIndex: number;
+  shadowWidth: number;
   canCycle: boolean;
   hideArrows?: boolean;
   onPrevious: () => void;
   onNext: () => void;
 }) {
   return (
-    <View style={{ height, justifyContent: 'center' }}>
-      {/* Garment takes the full stage width */}
-      <View style={{ paddingHorizontal: hideArrows ? spacing.lg : ARROW_GUTTER, height: '100%' }}>
+    <View
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top,
+        height,
+        zIndex,
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ width, height: '100%', alignSelf: 'center', justifyContent: 'center' }}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            alignSelf: 'center',
+            bottom: 13,
+            width: shadowWidth,
+            height: 18,
+            borderRadius: radius.full,
+            backgroundColor: 'rgba(32,29,24,0.18)',
+            transform: [{ scaleY: 0.38 }],
+          }}
+        />
         {item ? (
           <Image
             source={{ uri: item.photo_clean_url ?? item.photo_url }}
             style={{ width: '100%', height: '100%' }}
             contentFit="contain"
-            transition={200}
+            transition={240}
             cachePolicy="memory-disk"
           />
         ) : (
@@ -110,11 +165,11 @@ function GarmentRow({
         )}
       </View>
 
-      {/* Label sits discreetly bottom-left of the row */}
+      {/* Small studio annotation; arrows stay beside the actual garment. */}
       <Text
         style={[
           typography.eyebrow,
-          { color: INK_MUTED, fontSize: 9, position: 'absolute', left: spacing.md, bottom: 4 },
+          { color: INK_MUTED, fontSize: 9, position: 'absolute', left: spacing.md, top: 8 },
         ]}
       >
         {label}

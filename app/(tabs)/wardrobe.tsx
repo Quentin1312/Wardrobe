@@ -3,41 +3,45 @@ import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { WashCycle } from '@/components/WashCycle';
 import { CATEGORIES, categoryKey } from '@/constants/categories';
-import { radius, shadows, spacing, typography } from '@/constants/theme';
+import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { fetchClothes, washAll } from '@/lib/clothes';
+import { cleanMissingBackgrounds, fetchClothes, washAll } from '@/lib/clothes';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
 type Filter = ClothingCategory | 'all' | 'fav' | 'dirty';
 
 export default function Wardrobe() {
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const userId = session?.user?.id;
 
   const [items, setItems] = useState<Clothing[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
   const [washing, setWashing] = useState(false);
+  const [laundryError, setLaundryError] = useState<string | null>(null);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanProgress, setCleanProgress] = useState({ done: 0, total: 0 });
+  const [cleanMessage, setCleanMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!session?.user) return;
+    if (!userId) return;
     try {
-      setItems(await fetchClothes(session.user.id));
+      setItems(await fetchClothes(userId));
     } catch {
       // empty state covers it
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -47,6 +51,7 @@ export default function Wardrobe() {
   );
   const hasFavorites = items.some((i) => i.favorite);
   const dirtyCount = items.filter((i) => i.dirty).length;
+  const pendingCleanCount = items.filter((i) => !i.photo_clean_url).length;
 
   const shown =
     filter === 'all'
@@ -58,14 +63,47 @@ export default function Wardrobe() {
           : items.filter((i) => i.category === filter);
 
   function onWashAll() {
-    if (!session?.user || dirtyCount === 0) return;
+    if (!userId || dirtyCount === 0) return;
+    setLaundryError(null);
     setWashing(true);
-    // Run the update while the cycle animation plays.
-    washAll(session.user.id).catch(() => {});
   }
 
-  // Keep the add button clear of the floating tab bar.
-  const fabBottom = (insets.bottom > 0 ? insets.bottom : 14) + 62 + 16;
+  const performWash = useCallback(async () => {
+    if (!userId) throw new Error('missing_user');
+    await washAll(userId);
+  }, [userId]);
+
+  const finishWash = useCallback(() => {
+    setWashing(false);
+    setFilter('all');
+    load();
+  }, [load]);
+
+  const failWash = useCallback(() => {
+    setWashing(false);
+    setLaundryError(t('laundry.failed'));
+    load();
+  }, [load, t]);
+
+  async function onCleanLegacy() {
+    if (cleaning || pendingCleanCount === 0) return;
+    setCleaning(true);
+    setCleanMessage(null);
+    setCleanProgress({ done: 0, total: pendingCleanCount });
+    try {
+      const result = await cleanMissingBackgrounds(items, (done, total) => {
+        setCleanProgress({ done, total });
+      });
+      setCleanMessage(
+        result.failed > 0
+          ? t('wardrobe.cleanLegacyPartial', { cleaned: result.cleaned, failed: result.failed })
+          : t('wardrobe.cleanLegacyDone', { count: result.cleaned })
+      );
+      await load();
+    } finally {
+      setCleaning(false);
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -90,18 +128,74 @@ export default function Wardrobe() {
             width: '100%',
             maxWidth: 760,
             alignSelf: 'center',
-            paddingBottom: fabBottom + 70,
+            paddingBottom: 132,
             gap: spacing.md,
           }}
           ListHeaderComponent={
             <View style={{ paddingHorizontal: spacing.screen, paddingTop: spacing.sm, gap: 4 }}>
-              <Text style={[typography.eyebrow, { color: colors.accent }]}>
-                YOUR ARCHIVE / {String(items.length).padStart(2, '0')}
-              </Text>
-              <Text style={[typography.h1, { color: colors.text }]}>{t('wardrobe.title')}</Text>
-              <Text style={[typography.small, { color: colors.textMuted }]}>
-                {t('wardrobe.count', { count: items.length })}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={[typography.eyebrow, { color: colors.accent }]}>
+                    YOUR ARCHIVE / {String(items.length).padStart(2, '0')}
+                  </Text>
+                  <Text style={[typography.h1, { color: colors.text }]}>{t('wardrobe.title')}</Text>
+                  <Text style={[typography.small, { color: colors.textMuted }]}>
+                    {t('wardrobe.count', { count: items.length })}
+                  </Text>
+                </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('add.title')}
+                  onPress={() => router.push('/add-item')}
+                  style={({ pressed }) => ({
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: pressed ? colors.accentSoft : colors.energy,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  })}
+                >
+                  <Ionicons name="add" size={27} color={colors.energyText} />
+                </Pressable>
+              </View>
+
+              {pendingCleanCount > 0 || cleaning || cleanMessage ? (
+                <Pressable
+                  disabled={cleaning || pendingCleanCount === 0}
+                  onPress={onCleanLegacy}
+                  style={({ pressed }) => ({
+                    marginTop: spacing.md,
+                    minHeight: 48,
+                    borderRadius: radius.md,
+                    borderWidth: 1,
+                    borderColor: colors.borderStrong,
+                    backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                  })}
+                >
+                  {cleaning ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Ionicons
+                      name={pendingCleanCount > 0 ? 'sparkles-outline' : 'checkmark-circle'}
+                      size={18}
+                      color={pendingCleanCount > 0 ? colors.accent : colors.success}
+                    />
+                  )}
+                  <Text style={[typography.bodyStrong, { color: colors.text, textAlign: 'center' }]}>
+                    {cleaning
+                      ? t('wardrobe.cleaningLegacy', cleanProgress)
+                      : cleanMessage ?? t('wardrobe.cleanLegacy', { count: pendingCleanCount })}
+                  </Text>
+                </Pressable>
+              ) : null}
 
               <ScrollView
                 horizontal
@@ -156,6 +250,27 @@ export default function Wardrobe() {
                   </Text>
                 </Pressable>
               ) : null}
+
+              {laundryError ? (
+                <Pressable
+                  onPress={() => setLaundryError(null)}
+                  style={{
+                    marginTop: spacing.sm,
+                    flexDirection: 'row',
+                    gap: spacing.sm,
+                    padding: spacing.md,
+                    borderRadius: radius.md,
+                    borderWidth: 1,
+                    borderColor: colors.danger,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <Ionicons name="alert-circle-outline" size={19} color={colors.danger} />
+                  <Text style={[typography.small, { color: colors.text, flex: 1 }]}>
+                    {laundryError}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           }
           renderItem={({ item }) => (
@@ -164,33 +279,11 @@ export default function Wardrobe() {
         />
       )}
 
-      {/* Add button */}
-      <Pressable
-        onPress={() => router.push('/add-item')}
-        style={({ pressed }) => ({
-          position: 'absolute',
-          right: spacing.screen,
-          bottom: fabBottom,
-          width: 58,
-          height: 58,
-          borderRadius: 29,
-          backgroundColor: colors.energy,
-          alignItems: 'center',
-          justifyContent: 'center',
-          transform: [{ rotate: '-8deg' }, { scale: pressed ? 0.94 : 1 }],
-          ...shadows.floating(dark),
-        })}
-      >
-        <Ionicons name="add" size={30} color={colors.energyText} />
-      </Pressable>
-
       <WashCycle
         visible={washing}
-        onDone={() => {
-          setWashing(false);
-          setFilter('all');
-          load();
-        }}
+        onWash={performWash}
+        onDone={finishWash}
+        onError={failWash}
       />
     </SafeAreaView>
   );

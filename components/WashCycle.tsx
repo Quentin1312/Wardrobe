@@ -19,8 +19,21 @@ const LAUNDRY = [
   { c: '#C7B8E4', w: 26, h: 22, x: 2, y: -4, r: '40deg' },
 ];
 
-/** Washing-machine cycle played when the basket is emptied. */
-export function WashCycle({ visible, onDone }: { visible: boolean; onDone: () => void }) {
+/**
+ * Washing-machine cycle played when the basket is emptied. The success state
+ * is only shown after the database update has actually completed.
+ */
+export function WashCycle({
+  visible,
+  onWash,
+  onDone,
+  onError,
+}: {
+  visible: boolean;
+  onWash: () => Promise<void>;
+  onDone: () => void;
+  onError: (error: unknown) => void;
+}) {
   const { colors, dark } = useTheme();
   const { t } = useLocale();
   const [finished, setFinished] = useState(false);
@@ -41,6 +54,14 @@ export function WashCycle({ visible, onDone }: { visible: boolean; onDone: () =>
     [spin, shake, water, wave, done].forEach((v) => v.setValue(0));
     suds.forEach((s) => s.setValue(0));
     setFinished(false);
+    let active = true;
+
+    // Start the real update with the visual cycle, but immediately normalize
+    // rejections so a fast network failure never becomes an unhandled promise.
+    const washTask = onWash().then(
+      () => ({ ok: true as const }),
+      (error: unknown) => ({ ok: false as const, error })
+    );
 
     // Drum accelerates, then keeps a steady fast spin.
     const spinLoop = Animated.loop(
@@ -90,23 +111,33 @@ export function WashCycle({ visible, onDone }: { visible: boolean; onDone: () =>
       shakeLoop.stop();
       sudsLoops.forEach((l) => l.stop());
     };
+    let doneTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       stopAll();
+      const result = await washTask;
+      if (!active) return;
+      if (!result.ok) {
+        onError(result.error);
+        return;
+      }
       // Drain, then reveal the clean state.
       Animated.timing(water, { toValue: 0, duration: 520, easing: Easing.in(Easing.quad), useNativeDriver: true })
         .start(() => {
+          if (!active) return;
           setFinished(true);
           Animated.spring(done, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start();
-          setTimeout(onDone, 1250);
+          doneTimer = setTimeout(onDone, 1250);
         });
     }, CYCLE_MS);
 
     return () => {
+      active = false;
       clearTimeout(timer);
+      if (doneTimer) clearTimeout(doneTimer);
       stopAll();
     };
-  }, [visible, spin, shake, water, wave, done, suds, onDone]);
+  }, [visible, spin, shake, water, wave, done, suds, onWash, onDone, onError]);
 
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const translateX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-3.5, 3.5] });

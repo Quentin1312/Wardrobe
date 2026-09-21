@@ -120,6 +120,7 @@ const en: Dict = {
   'laundry.badge': 'Dirty',
   'laundry.emptyTitle': 'Nothing in the laundry',
   'laundry.emptyBody': 'Pieces you wear land here automatically.',
+  'laundry.failed': 'The wash could not be saved. Your items are still marked as dirty.',
 
   'item.title': 'Item',
   'item.name': 'Name',
@@ -149,6 +150,11 @@ const en: Dict = {
   'wardrobe.deleteTitle': 'Delete this item?',
   'wardrobe.deleteBody': 'This cannot be undone.',
   'wardrobe.removeBg': 'Remove background',
+  'wardrobe.backgroundReady': 'Background removed',
+  'wardrobe.cleanLegacy': 'Clean {count} old photo(s)',
+  'wardrobe.cleaningLegacy': 'Cleaning photos · {done}/{total}',
+  'wardrobe.cleanLegacyDone': '{count} photo(s) cleaned',
+  'wardrobe.cleanLegacyPartial': '{cleaned} cleaned · {failed} failed',
   'common.delete': 'Delete',
 
   'add.title': 'Add an item',
@@ -294,6 +300,7 @@ const fr: Dict = {
   'laundry.badge': 'Sale',
   'laundry.emptyTitle': 'Rien au sale',
   'laundry.emptyBody': 'Les pièces que tu portes atterrissent ici automatiquement.',
+  'laundry.failed': 'Le lavage n’a pas pu être enregistré. Les pièces restent marquées comme sales.',
 
   'item.title': 'Pièce',
   'item.name': 'Nom',
@@ -323,6 +330,11 @@ const fr: Dict = {
   'wardrobe.deleteTitle': 'Supprimer cette pièce ?',
   'wardrobe.deleteBody': 'Action irréversible.',
   'wardrobe.removeBg': 'Détourer',
+  'wardrobe.backgroundReady': 'Fond déjà retiré',
+  'wardrobe.cleanLegacy': 'Nettoyer {count} ancienne(s) photo(s)',
+  'wardrobe.cleaningLegacy': 'Nettoyage · {done}/{total}',
+  'wardrobe.cleanLegacyDone': '{count} photo(s) nettoyée(s)',
+  'wardrobe.cleanLegacyPartial': '{cleaned} nettoyée(s) · {failed} en échec',
   'common.delete': 'Supprimer',
 
   'add.title': 'Ajouter une pièce',

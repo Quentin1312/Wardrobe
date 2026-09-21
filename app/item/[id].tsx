@@ -275,7 +275,28 @@ export default function ItemSheet() {
             label={item.dirty ? t('laundry.markClean') : t('laundry.markDirty')}
             onPress={onToggleDirty}
           />
-          <ActionRow icon="cut-outline" label={t('wardrobe.removeBg')} onPress={onDetour} />
+          {item.photo_clean_url ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.sm,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.md,
+                borderRadius: radius.md,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={[typography.bodyStrong, { color: colors.success }]}>
+                {t('wardrobe.backgroundReady')}
+              </Text>
+            </View>
+          ) : (
+            <ActionRow icon="cut-outline" label={t('wardrobe.removeBg')} onPress={onDetour} />
+          )}
           <ActionRow icon="trash-outline" label={t('common.delete')} onPress={onDelete} danger />
         </View>
       </ScrollView>

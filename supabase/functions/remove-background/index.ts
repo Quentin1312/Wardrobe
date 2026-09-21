@@ -47,11 +47,17 @@ Deno.serve(async (req) => {
 
     const { data: item, error: itemErr } = await supabase
       .from('clothes')
-      .select('id, photo_url')
+      .select('id, photo_url, photo_clean_url')
       .eq('id', clothingId)
       .eq('user_id', userId)
       .single();
     if (itemErr || !item) return json({ error: 'clothing_not_found' }, 404);
+
+    // remove.bg charges per processed image. Once a clean asset exists, always
+    // reuse it instead of spending another credit on the same source photo.
+    if (item.photo_clean_url) {
+      return json({ url: item.photo_clean_url, cached: true });
+    }
 
     // Call remove.bg with the original photo URL.
     const form = new FormData();

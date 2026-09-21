@@ -69,13 +69,15 @@ alter table public.tryon_results enable row level security;
 -- profiles
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
-  for select using (auth.uid() = id);
+  for select to authenticated using ((select auth.uid()) = id);
 drop policy if exists "profiles_insert_own" on public.profiles;
 create policy "profiles_insert_own" on public.profiles
-  for insert with check (auth.uid() = id);
+  for insert to authenticated with check ((select auth.uid()) = id);
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
-  for update using (auth.uid() = id);
+  for update to authenticated
+  using ((select auth.uid()) = id)
+  with check ((select auth.uid()) = id);
 
 -- generic owner policies for the rest
 do $$
@@ -85,7 +87,9 @@ begin
     execute format('drop policy if exists "%1$s_all_own" on public.%1$s', t);
     execute format(
       'create policy "%1$s_all_own" on public.%1$s
-         for all using (auth.uid() = user_id) with check (auth.uid() = user_id)', t);
+         for all to authenticated
+         using ((select auth.uid()) = user_id)
+         with check ((select auth.uid()) = user_id)', t);
   end loop;
 end $$;
 
@@ -93,7 +97,7 @@ end $$;
 -- Auto-create a profile row when a new auth user signs up
 -- ============================================================
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.profiles (id, email)
   values (new.id, new.email)
@@ -105,6 +109,9 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Trigger-only function: prevent direct calls through the Data API.
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 -- ============================================================
 -- Storage buckets
@@ -130,7 +137,9 @@ begin
     execute format('drop policy if exists "%1$s_read" on storage.objects', b);
     execute format(
       'create policy "%1$s_read" on storage.objects
-         for select using (bucket_id = %1$L)', b);
+         for select to authenticated using (
+           bucket_id = %1$L
+           and (storage.foldername(name))[1] = (select auth.uid())::text)', b);
 
     execute format('drop policy if exists "%1$s_write" on storage.objects', b);
     execute format(
