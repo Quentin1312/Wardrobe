@@ -73,11 +73,13 @@ const dylan: CompanionArt = {
     // small tan chest patch
     { t: 'path', d: 'M86 120 Q100 132 114 120 Q116 144 100 154 Q84 144 86 120 Z', fill: D.tan },
     // front legs and paws
-    { t: 'path', d: 'M87 148 Q84 168 83 184 Q89 190 95 184 Q95 166 97 148 Z', fill: D.tan },
-    { t: 'path', d: 'M103 148 Q105 166 105 184 Q111 190 117 184 Q116 168 113 148 Z', fill: D.tan },
-    { t: 'ellipse', cx: 88, cy: 188, rx: 9, ry: 4.5, fill: D.tanLight },
-    { t: 'ellipse', cx: 112, cy: 188, rx: 9, ry: 4.5, fill: D.tanLight },
-    { t: 'path', d: 'M86 186 L86 190 M90 186 L90 190 M110 186 L110 190 M114 186 L114 190', stroke: D.tan, strokeWidth: 1.4 },
+    { t: 'path', d: 'M79 144 Q75 166 77 184 Q87 193 98 185 Q100 164 99 144 Z', fill: D.tan },
+    { t: 'path', d: 'M101 144 Q100 164 102 185 Q113 193 123 184 Q125 166 121 144 Z', fill: D.tan },
+    // soft shading between the legs
+    { t: 'path', d: 'M99 162 Q100 175 100 186 Q100 175 101 162 Z', fill: D.charcoal, opacity: 0.35 },
+    { t: 'ellipse', cx: 87, cy: 188, rx: 13, ry: 6.5, fill: D.tanLight },
+    { t: 'ellipse', cx: 113, cy: 188, rx: 13, ry: 6.5, fill: D.tanLight },
+    { t: 'path', d: 'M83 185 L83 191 M88 184 L88 191 M93 185 L93 191 M107 185 L107 191 M112 184 L112 191 M117 185 L117 191', stroke: D.tan, strokeWidth: 1.6 },
   ],
   neck: [100, 118],
   head: [
