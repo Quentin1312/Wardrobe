@@ -8,11 +8,11 @@ export type CompanionMood = 'idle' | 'happy' | 'thinking';
 
 const CANVAS = 200;
 
-/** Tail rhythm per personality: the dog wags, the cat swishes, the fox sways. */
+/** Tail rhythm per personality: the dog wags, the cat swishes, the parrot's tail feathers sway. */
 const TAIL_MS: Record<CompanionKind, { idle: number; happy: number; amp: number }> = {
   dylan: { idle: 420, happy: 170, amp: 14 },
   miso: { idle: 1300, happy: 700, amp: 10 },
-  roux: { idle: 820, happy: 380, amp: 11 },
+  rio: { idle: 900, happy: 420, amp: 6 },
 };
 
 function renderShape(s: Shape, key: number) {

@@ -4,12 +4,12 @@ import type { CompanionKind } from './art';
 export type { CompanionKind } from './art';
 export { COMPANION_ART } from './art';
 
-export const COMPANION_KINDS: CompanionKind[] = ['dylan', 'miso', 'roux'];
+export const COMPANION_KINDS: CompanionKind[] = ['dylan', 'miso', 'rio'];
 
 export const COMPANION_NAMES: Record<CompanionKind, string> = {
   dylan: 'Dylan',
   miso: 'Miso',
-  roux: 'Roux',
+  rio: 'Rio',
 };
 
 /** What the companion knows about the user's day. */
@@ -63,21 +63,22 @@ const VOICE: Record<CompanionKind, { hello: Lines; idle: Lines }> = {
       ],
     },
   },
-  roux: {
+  // A parrot: loves colour, repeats itself.
+  rio: {
     hello: {
-      fr: ['{hi} {name} ! Prêt·e à briller ?', 'Hey {name} ! {hi} !', '{hi} {name}, j’ai flairé une bonne journée.'],
-      en: ['{hi} {name}! Ready to shine?', 'Hey {name}! {hi}!', '{hi} {name}, I can smell a good day.'],
+      fr: ['{hi} {name} ! {hi} ! {hi} !', 'Rio est là ! {hi} {name} !', 'Coucou {name} ! Coucou coucou !'],
+      en: ['{hi} {name}! {hi}! {hi}!', 'Rio is here! {hi} {name}!', 'Hello {name}! Hello hello!'],
     },
     idle: {
       fr: [
-        'Astuce de renard : une couleur forte, le reste sobre.',
-        'Les chaussures font la tenue. Ne les néglige pas.',
-        'Ose un peu. Le monde est une piste de défilé.',
+        'Jolie tenue ! Jolie tenue !',
+        'Rio adore les couleurs. Ose la couleur ! La couleur !',
+        'Un rouge, un bleu, un jaune… comme mes plumes ! Comme mes plumes !',
       ],
       en: [
-        'Fox tip: one bold colour, keep the rest calm.',
-        'Shoes make the outfit. Don’t skip them.',
-        'Dare a little. The street is your runway.',
+        'Nice outfit! Nice outfit!',
+        'Rio loves colour. Dare the colour! The colour!',
+        'Red, blue, yellow… like my feathers! Like my feathers!',
       ],
     },
   },
@@ -160,6 +161,6 @@ export function companionReaction(
       en: ['All clean, smells great!', 'Laundry done. Mission accomplished.'],
     },
   };
-  const prefix = kind === 'dylan' ? (fr ? 'Ouaf ! ' : 'Woof! ') : kind === 'miso' ? (fr ? 'Miaou. ' : 'Meow. ') : '';
+  const prefix = kind === 'dylan' ? (fr ? 'Ouaf ! ' : 'Woof! ') : kind === 'miso' ? (fr ? 'Miaou. ' : 'Meow. ') : 'Rrrio ! ';
   return prefix + pick(bank[moment][fr ? 'fr' : 'en']);
 }

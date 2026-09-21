@@ -17,11 +17,11 @@ const COPY = {
     title: 'Choisis qui t’accompagne',
     body: 'Il te suivra partout dans l’app : conseils météo, tenues, rappels de linge.',
     cta: (name: string) => `C’est ${name} !`,
-    species: { dylan: 'Poméranien', miso: 'Chat', roux: 'Renard' },
+    species: { dylan: 'Poméranien', miso: 'Chat', rio: 'Perroquet' },
     intro: {
       dylan: 'Ouaf ! Moi c’est Dylan. Un œil bleu, un œil marron, et beaucoup de style.',
       miso: 'Miaou. Miso. J’ai l’œil pour les belles matières.',
-      roux: 'Salut, moi c’est Roux. Je flaire les bonnes tenues à des kilomètres.',
+      rio: 'Rio ! Rio ! Je suis Rio, et j’adore les couleurs. Les couleurs !',
     },
   },
   en: {
@@ -29,11 +29,11 @@ const COPY = {
     title: 'Choose your sidekick',
     body: 'They’ll follow you around the app: weather tips, outfits, laundry nudges.',
     cta: (name: string) => `${name} it is!`,
-    species: { dylan: 'Pomeranian', miso: 'Cat', roux: 'Fox' },
+    species: { dylan: 'Pomeranian', miso: 'Cat', rio: 'Parrot' },
     intro: {
       dylan: 'Woof! I’m Dylan. One blue eye, one brown, lots of style.',
       miso: 'Meow. Miso. I have an eye for good fabrics.',
-      roux: 'Hey, I’m Roux. I can smell a great outfit a mile away.',
+      rio: 'Rio! Rio! I’m Rio and I love colours. Colours!',
     },
   },
 };
