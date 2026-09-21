@@ -17,9 +17,9 @@ interface OutfitStudioProps {
 }
 
 const ROWS: { category: ClothingCategory; height: number }[] = [
-  { category: 'top', height: 238 },
-  { category: 'bottom', height: 276 },
-  { category: 'shoes', height: 148 },
+  { category: 'top', height: 200 },
+  { category: 'bottom', height: 228 },
+  { category: 'shoes', height: 118 },
 ];
 
 export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: OutfitStudioProps) {
@@ -37,7 +37,7 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
         borderColor: colors.border,
       }}
     >
-      {rows.map((row, index) => (
+      {rows.map((row) => (
         <GarmentRow
           key={row.category}
           height={row.height}
@@ -45,7 +45,6 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
           label={t(categoryKey(row.category))}
           canCycle={counts[row.category] > 1}
           hideArrows={locked}
-          showDivider={index < rows.length - 1}
           onPrevious={() => onPrevious(row.category)}
           onNext={() => onNext(row.category)}
         />
@@ -60,7 +59,6 @@ function GarmentRow({
   height,
   canCycle,
   hideArrows,
-  showDivider,
   onPrevious,
   onNext,
 }: {
@@ -69,7 +67,6 @@ function GarmentRow({
   height: number;
   canCycle: boolean;
   hideArrows?: boolean;
-  showDivider: boolean;
   onPrevious: () => void;
   onNext: () => void;
 }) {
@@ -78,12 +75,10 @@ function GarmentRow({
     <View
       style={{
         height,
-        borderBottomWidth: showDivider ? 1 : 0,
-        borderBottomColor: colors.border,
         justifyContent: 'center',
       }}
     >
-      <View style={{ height: '100%', paddingHorizontal: hideArrows ? spacing.lg : 52, paddingVertical: 10 }}>
+      <View style={{ height: '100%', paddingHorizontal: hideArrows ? spacing.lg : 52, paddingVertical: 2 }}>
         {item ? (
           <Image
             source={{ uri: item.photo_clean_url ?? item.photo_url }}
@@ -99,14 +94,14 @@ function GarmentRow({
         )}
       </View>
 
-      <Text
-        style={[
-          typography.eyebrow,
-          { color: colors.textMuted, fontSize: 9, position: 'absolute', left: spacing.md, top: spacing.md },
-        ]}
-      >
-        {label}
-      </Text>
+      <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: '45%' }} pointerEvents="none">
+        <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{label}</Text>
+        {item?.name ? (
+          <Text numberOfLines={2} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
+            {item.name}
+          </Text>
+        ) : null}
+      </View>
 
       {hideArrows ? null : (
         <>

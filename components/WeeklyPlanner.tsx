@@ -153,17 +153,20 @@ export function WeeklyPlanner({
             <View
               key={item.id}
               style={{
-                height: item.category === 'shoes' ? 145 : 220,
+                height: item.category === 'shoes' ? 118 : item.category === 'bottom' ? 228 : 200,
                 backgroundColor: colors.surface,
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
                 paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.sm,
+                paddingVertical: 2,
               }}
             >
-              <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9, position: 'absolute', left: spacing.md, top: spacing.md }]}>
-                {t(categoryKey(item.category))}
-              </Text>
+              <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: '45%', zIndex: 1 }} pointerEvents="none">
+                <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{t(categoryKey(item.category))}</Text>
+                {item.name ? (
+                  <Text numberOfLines={2} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
+                    {item.name}
+                  </Text>
+                ) : null}
+              </View>
               <Image
                 source={{ uri: item.photo_clean_url ?? item.photo_url }}
                 style={{ width: '100%', height: '100%' }}
