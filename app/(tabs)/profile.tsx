@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
@@ -8,6 +10,9 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
+import { useCompanion } from '@/context/CompanionProvider';
+import { CompanionAvatar } from '@/components/companion/CompanionAvatar';
+import { COMPANION_NAMES } from '@/lib/companion';
 
 export default function Profile() {
   const { colors } = useTheme();
@@ -53,6 +58,7 @@ export default function Profile() {
         <SettingRow label={t('profile.theme')}>
           <ThemeSwitch />
         </SettingRow>
+        <CompanionRow />
 
         <View style={{ flex: 1 }} />
         <Button label={t('profile.signOut')} variant="ghost" onPress={signOut} />
@@ -78,5 +84,40 @@ function SettingRow({ label, children }: { label: string; children: ReactNode })
       <Text style={[typography.bodyStrong, { color: colors.text }]}>{label}</Text>
       {children}
     </View>
+  );
+}
+
+/** Shows the current companion and opens the picker to swap it. */
+function CompanionRow() {
+  const { colors } = useTheme();
+  const { locale } = useLocale();
+  const { kind } = useCompanion();
+  const router = useRouter();
+  if (!kind) return null;
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: '/select-companion', params: { change: '1' } })}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
+      })}
+    >
+      <CompanionAvatar kind={kind} size={56} />
+      <View style={{ flex: 1 }}>
+        <Text style={[typography.bodyStrong, { color: colors.text }]}>
+          {locale === 'fr' ? 'Compagnon' : 'Companion'}
+        </Text>
+        <Text style={[typography.small, { color: colors.textMuted }]}>{COMPANION_NAMES[kind]}</Text>
+      </View>
+      <Text style={[typography.caption, { color: colors.accent }]}>
+        {locale === 'fr' ? 'Changer' : 'Change'}
+      </Text>
+      <Ionicons name="chevron-forward" size={18} color={colors.accent} />
+    </Pressable>
   );
 }

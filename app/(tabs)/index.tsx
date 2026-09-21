@@ -8,6 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { useWeather } from '@/hooks/useWeather';
+import { CompanionCard } from '@/components/companion/CompanionCard';
 import type { Weather } from '@/lib/weather';
 import type { Locale } from '@/lib/i18n';
 
@@ -80,6 +81,12 @@ export default function Today() {
             )}
           </View>
         </View>
+
+        {/* Companion greets you and comments on the day */}
+        <CompanionCard
+          temp={state.status === 'ready' ? state.weather.temp : null}
+          weatherMain={state.status === 'ready' ? state.weather.main : null}
+        />
 
         {/* Weather */}
         {state.status === 'loading' ? (

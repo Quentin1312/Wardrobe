@@ -18,12 +18,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LocaleProvider, useLocale } from '@/context/LocaleContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { CompanionProvider, useCompanion } from '@/context/CompanionProvider';
 import { colors } from '@/constants/theme';
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
   const { chosen, ready } = useLocale();
   const { colors: themeColors, dark } = useTheme();
+  const { kind: companion, ready: companionReady } = useCompanion();
   const segments = useSegments();
   const router = useRouter();
 
@@ -33,7 +35,7 @@ function RootNavigator() {
   }, [themeColors.bg]);
 
   useEffect(() => {
-    if (loading || !ready) return;
+    if (loading || !ready || !companionReady) return;
 
     const route = segments[0]; // group or route name
 
@@ -53,12 +55,15 @@ function RootNavigator() {
       router.replace('/(auth)/sign-in');
     } else if (signedIn && needsOnboarding && route !== '(onboarding)') {
       router.replace('/(onboarding)/profile-photo');
+    } else if (signedIn && !needsOnboarding && !companion && route !== 'select-companion') {
+      // Last onboarding step: pick the companion that follows you around.
+      router.replace('/select-companion');
     } else if (signedIn && !needsOnboarding && (route === '(auth)' || route === '(onboarding)')) {
       router.replace('/(tabs)');
     }
-  }, [loading, ready, chosen, session, profile, segments, router]);
+  }, [loading, ready, companionReady, companion, chosen, session, profile, segments, router]);
 
-  if (loading || !ready) {
+  if (loading || !ready || !companionReady) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: themeColors.bg }}>
         <ActivityIndicator color={themeColors.primary} />
@@ -76,6 +81,7 @@ function RootNavigator() {
         }}
       >
         <Stack.Screen name="select-language" />
+        <Stack.Screen name="select-companion" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(tabs)" />
@@ -108,9 +114,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <LocaleProvider>
+          <CompanionProvider>
           <AuthProvider>
             <RootNavigator />
           </AuthProvider>
+          </CompanionProvider>
         </LocaleProvider>
       </ThemeProvider>
     </SafeAreaProvider>

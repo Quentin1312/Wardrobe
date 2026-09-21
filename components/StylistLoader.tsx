@@ -5,6 +5,8 @@ import { Animated, Easing, Modal, StyleSheet, Text, View } from 'react-native';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useCompanion } from '@/context/CompanionProvider';
+import { CompanionAvatar } from '@/components/companion/CompanionAvatar';
 
 const STEP_KEYS = [
   'stylist.step1',
@@ -18,6 +20,7 @@ const STEP_KEYS = [
 export function StylistLoader({ visible }: { visible: boolean }) {
   const { colors, dark } = useTheme();
   const { t } = useLocale();
+  const { kind: companion } = useCompanion();
   const [step, setStep] = useState(0);
 
   const pulse = useRef(new Animated.Value(0)).current;
@@ -79,18 +82,23 @@ export function StylistLoader({ visible }: { visible: boolean }) {
                 transform: [{ scale }],
               }}
             />
-            <View
-              style={{
-                width: 84,
-                height: 84,
-                borderRadius: 42,
-                backgroundColor: colors.energy,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="color-wand-outline" size={36} color={colors.energyText} />
-            </View>
+            {companion ? (
+              // The companion does the thinking, head tilted.
+              <CompanionAvatar kind={companion} size={128} mood="thinking" />
+            ) : (
+              <View
+                style={{
+                  width: 84,
+                  height: 84,
+                  borderRadius: 42,
+                  backgroundColor: colors.energy,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="color-wand-outline" size={36} color={colors.energyText} />
+              </View>
+            )}
           </View>
 
           <View style={{ alignItems: 'center', gap: spacing.xs }}>

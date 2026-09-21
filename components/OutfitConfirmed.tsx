@@ -6,6 +6,10 @@ import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from 'reac
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useCompanion } from '@/context/CompanionProvider';
+import { CompanionAvatar } from '@/components/companion/CompanionAvatar';
+import { SpeechBubble } from '@/components/companion/SpeechBubble';
+import { companionReaction } from '@/lib/companion';
 import type { Clothing } from '@/lib/types';
 
 /** Celebrates locking in the look for today. */
@@ -19,7 +23,14 @@ export function OutfitConfirmed({
   onClose: () => void;
 }) {
   const { colors, dark } = useTheme();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { kind: companion } = useCompanion();
+  // One reaction per opening, not a new one on every render.
+  const reaction = useMemo(
+    () => (companion ? companionReaction(companion, 'validated', locale) : ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [companion, locale, visible]
+  );
 
   const check = useRef(new Animated.Value(0)).current;
   const ring = useRef(new Animated.Value(0)).current;
@@ -67,7 +78,34 @@ export function OutfitConfirmed({
         />
 
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: spacing.lg }}>
-          {/* Check with expanding ring */}
+          {companion ? (
+            <View style={{ alignItems: 'center', gap: spacing.sm }}>
+              <View style={{ maxWidth: 300 }}>
+                <SpeechBubble text={reaction} tail="bottom" />
+              </View>
+              <View>
+                <CompanionAvatar kind={companion} size={140} mood="happy" bounceKey={visible} />
+                {/* Check badge on the companion */}
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 8,
+                    width: 42,
+                    height: 42,
+                    borderRadius: 21,
+                    backgroundColor: colors.energy,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: [{ scale: check }],
+                  }}
+                >
+                  <Ionicons name="checkmark" size={24} color={colors.energyText} />
+                </Animated.View>
+              </View>
+            </View>
+          ) : (
+          /* Check with expanding ring */
           <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
             <Animated.View
               style={{
@@ -95,6 +133,7 @@ export function OutfitConfirmed({
               <Ionicons name="checkmark" size={48} color={colors.energyText} />
             </Animated.View>
           </View>
+          )}
 
           {/* The look */}
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
