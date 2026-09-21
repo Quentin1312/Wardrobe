@@ -208,94 +208,90 @@ const miso: CompanionArt = {
 };
 
 // ---------------------------------------------------------------------------
-// Rio — a scarlet macaw perched on a branch.
+// Noisette — a soft brown rabbit, sitting.
 // ---------------------------------------------------------------------------
-const P = {
-  red: '#D7322A',
-  redDeep: '#A92320',
-  yellow: '#F3C230',
-  blue: '#2D6CD3',
-  blueDeep: '#1F4FA8',
-  green: '#3E9F5A',
-  face: '#F6F2EA',
-  faceLine: '#D98A84',
-  beak: '#EFE5D0',
-  beakDark: '#2A2624',
-  iris: '#F4D96C',
-  pupil: '#141110',
-  branch: '#8A5B39',
-  branchLight: '#A87650',
-  foot: '#8E8A86',
+const R = {
+  fur: '#C99E77',
+  furDark: '#AE8260',
+  furLight: '#DDBB96',
+  cream: '#F5E8D6',
+  pink: '#F0ADA9',
+  nose: '#E58C92',
+  eye: '#2A1811',
+  line: '#8A6246',
+  whisker: '#FFF8EE',
 };
 
-const rio: CompanionArt = {
-  // long tail feathers hanging below the branch, swaying gently
-  tailPivot: [100, 150],
+const noisette: CompanionArt = {
+  // cotton-ball tail peeking out at the side, it wiggles
+  tailPivot: [140, 176],
   tail: [
-    { t: 'path', d: 'M92 148 Q86 172 84 198 Q90 200 95 197 Q98 172 100 150 Z', fill: P.red },
-    { t: 'path', d: 'M100 150 Q102 172 105 197 Q110 200 116 198 Q114 172 108 148 Z', fill: P.blue },
-    { t: 'path', d: 'M96 150 Q97 176 100 199 Q103 176 104 150 Z', fill: P.redDeep },
+    { t: 'circle', cx: 154, cy: 166, r: 13, fill: R.cream },
+    { t: 'circle', cx: 158, cy: 162, r: 6, fill: '#FFFFFF', opacity: 0.7 },
   ],
   body: [
-    // body
-    { t: 'ellipse', cx: 100, cy: 122, rx: 30, ry: 36, fill: P.red },
-    // chest feather scallops
-    { t: 'path', d: 'M88 112 Q94 118 100 112 Q106 118 112 112 M86 126 Q93 132 100 126 Q107 132 114 126 M90 140 Q95 145 100 140 Q105 145 110 140', stroke: P.redDeep, strokeWidth: 1.8, opacity: 0.8 },
-    // folded wings: red shoulder, yellow band, blue flight feathers
-    { t: 'path', d: 'M74 96 Q62 124 74 162 Q86 154 88 122 Q86 102 74 96 Z', fill: P.red },
-    { t: 'path', d: 'M72 110 Q66 124 69 134 Q80 130 86 120 Q82 110 72 110 Z', fill: P.yellow },
-    { t: 'path', d: 'M69 134 Q66 150 74 162 Q86 154 87 130 Q78 136 69 134 Z', fill: P.blue },
-    { t: 'path', d: 'M72 146 Q76 152 82 150', stroke: P.blueDeep, strokeWidth: 1.6 },
-    { t: 'path', d: 'M126 96 Q138 124 126 162 Q114 154 112 122 Q114 102 126 96 Z', fill: P.red },
-    { t: 'path', d: 'M128 110 Q134 124 131 134 Q120 130 114 120 Q118 110 128 110 Z', fill: P.yellow },
-    { t: 'path', d: 'M131 134 Q134 150 126 162 Q114 154 113 130 Q122 136 131 134 Z', fill: P.blue },
-    { t: 'path', d: 'M128 146 Q124 152 118 150', stroke: P.blueDeep, strokeWidth: 1.6 },
-    // branch
-    { t: 'path', d: 'M34 156 Q100 150 166 156 Q170 164 166 168 Q100 162 36 168 Q30 164 34 156 Z', fill: P.branch },
-    { t: 'path', d: 'M40 158 Q100 153 160 158', stroke: P.branchLight, strokeWidth: 2 },
-    { t: 'path', d: 'M150 158 Q160 146 170 144 Q166 150 158 160 Z', fill: P.green },
-    // feet gripping the branch
-    { t: 'path', d: 'M84 150 Q84 162 88 164 M90 150 Q91 162 94 164 M106 150 Q107 162 110 164 M112 150 Q114 162 116 164', stroke: P.foot, strokeWidth: 4 },
+    SHADOW,
+    // round haunches and long hind feet
+    { t: 'ellipse', cx: 72, cy: 167, rx: 25, ry: 22, fill: R.fur },
+    { t: 'ellipse', cx: 128, cy: 167, rx: 25, ry: 22, fill: R.fur },
+    { t: 'ellipse', cx: 60, cy: 188, rx: 18, ry: 6.5, fill: R.furLight },
+    { t: 'ellipse', cx: 140, cy: 188, rx: 18, ry: 6.5, fill: R.furLight },
+    // torso and soft belly
+    { t: 'path', d: 'M76 118 Q68 152 78 187 L122 187 Q132 152 124 118 Q100 104 76 118 Z', fill: R.fur },
+    { t: 'path', d: 'M84 124 Q100 134 116 124 Q121 160 100 178 Q79 160 84 124 Z', fill: R.cream },
+    // little front paws held together
+    { t: 'ellipse', cx: 91, cy: 166, rx: 9.5, ry: 15, fill: R.fur },
+    { t: 'ellipse', cx: 109, cy: 166, rx: 9.5, ry: 15, fill: R.fur },
+    { t: 'ellipse', cx: 91, cy: 178, rx: 9, ry: 6, fill: R.furLight },
+    { t: 'ellipse', cx: 109, cy: 178, rx: 9, ry: 6, fill: R.furLight },
   ],
-  neck: [100, 96],
+  neck: [100, 118],
   head: [
-    // little crest
-    { t: 'path', d: 'M92 42 Q94 30 100 36 Q104 26 108 40 Z', fill: P.red },
+    // long ears with pink insides
+    { t: 'path', d: 'M79 62 Q64 12 79 4 Q95 11 93 60 Z', fill: R.fur },
+    { t: 'path', d: 'M81 55 Q71 20 80 12 Q89 19 88 55 Z', fill: R.pink },
+    { t: 'path', d: 'M121 62 Q136 12 121 4 Q105 11 107 60 Z', fill: R.fur },
+    { t: 'path', d: 'M119 55 Q129 20 120 12 Q111 19 112 55 Z', fill: R.pink },
     // head
-    { t: 'circle', cx: 100, cy: 70, r: 31, fill: P.red },
-    // bare white face patches with fine feather lines
-    { t: 'ellipse', cx: 81, cy: 76, rx: 12, ry: 15, fill: P.face },
-    { t: 'ellipse', cx: 119, cy: 76, rx: 12, ry: 15, fill: P.face },
-    { t: 'path', d: 'M74 84 L84 86 M75 89 L85 90 M126 84 L116 86 M125 89 L115 90', stroke: P.faceLine, strokeWidth: 1.2 },
+    { t: 'path', d: 'M100 46 C 128 46 145 64 145 86 C 145 109 125 125 100 125 C 75 125 55 109 55 86 C 55 64 72 46 100 46 Z', fill: R.fur },
+    { t: 'path', d: 'M92 50 Q100 46 108 50 Q104 58 100 60 Q96 58 92 50 Z', fill: R.furDark, opacity: 0.35 },
+    // puffy cheeks
+    { t: 'ellipse', cx: 86, cy: 104, rx: 15, ry: 11.5, fill: R.cream },
+    { t: 'ellipse', cx: 114, cy: 104, rx: 15, ry: 11.5, fill: R.cream },
+    // blush
+    { t: 'ellipse', cx: 69, cy: 99, rx: 6.5, ry: 3.8, fill: R.pink, opacity: 0.55 },
+    { t: 'ellipse', cx: 131, cy: 99, rx: 6.5, ry: 3.8, fill: R.pink, opacity: 0.55 },
+    // nose
+    { t: 'path', d: 'M95.5 96 Q100 92.5 104.5 96 Q102.5 100.5 100 101 Q97.5 100.5 95.5 96 Z', fill: R.nose },
+    // whiskers
+    { t: 'path', d: 'M84 104 L62 100 M84 108 L62 111 M116 104 L138 100 M116 108 L138 111', stroke: R.whisker, strokeWidth: 1.3, opacity: 0.95 },
   ],
+  // big glossy eyes
   eyes: [
-    { t: 'circle', cx: 81, cy: 72, r: 6, fill: P.iris },
-    { t: 'circle', cx: 81, cy: 72, r: 3.2, fill: P.pupil },
-    { t: 'circle', cx: 79.5, cy: 70.5, r: 1.3, fill: '#FFFFFF' },
-    { t: 'circle', cx: 119, cy: 72, r: 6, fill: P.iris },
-    { t: 'circle', cx: 119, cy: 72, r: 3.2, fill: P.pupil },
-    { t: 'circle', cx: 117.5, cy: 70.5, r: 1.3, fill: '#FFFFFF' },
+    { t: 'circle', cx: 82, cy: 82, r: 8.5, fill: R.eye },
+    { t: 'circle', cx: 79, cy: 78.5, r: 2.8, fill: '#FFFFFF' },
+    { t: 'circle', cx: 85, cy: 85.5, r: 1.3, fill: '#FFFFFF', opacity: 0.8 },
+    { t: 'circle', cx: 118, cy: 82, r: 8.5, fill: R.eye },
+    { t: 'circle', cx: 115, cy: 78.5, r: 2.8, fill: '#FFFFFF' },
+    { t: 'circle', cx: 121, cy: 85.5, r: 1.3, fill: '#FFFFFF', opacity: 0.8 },
   ],
-  lidTop: 65,
+  lidTop: 72,
   lids: [
-    { t: 'ellipse', cx: 81, cy: 72, rx: 7.5, ry: 7.5, fill: P.face },
-    { t: 'ellipse', cx: 119, cy: 72, rx: 7.5, ry: 7.5, fill: P.face },
+    { t: 'ellipse', cx: 82, cy: 82, rx: 10.5, ry: 10.5, fill: R.fur },
+    { t: 'ellipse', cx: 118, cy: 82, rx: 10.5, ry: 10.5, fill: R.fur },
   ],
-  // lower beak: closed, then open when chatty
-  // big hooked ivory upper beak over a black lower beak
   mouthIdle: [
-    { t: 'path', d: 'M88 90 Q100 104 112 90 Q110 106 100 110 Q90 106 88 90 Z', fill: P.beakDark },
-    { t: 'path', d: 'M86 73 Q100 58 114 73 Q118 90 105 106 Q100 113 95 106 Q82 90 86 73 Z', fill: P.beak },
-    { t: 'path', d: 'M100 61 Q103 84 100 108', stroke: '#CDBF9F', strokeWidth: 1.6 },
+    { t: 'path', d: 'M100 101 L100 106 M100 106 Q96.5 109.5 93 107.5 M100 106 Q103.5 109.5 107 107.5', stroke: R.line, strokeWidth: 1.8 },
   ],
+  // open smile with two little buck teeth
   mouthHappy: [
-    { t: 'path', d: 'M87 94 Q100 124 113 94 Q110 116 100 121 Q90 116 87 94 Z', fill: P.beakDark },
-    { t: 'ellipse', cx: 100, cy: 111, rx: 4, ry: 3.5, fill: '#6B6461' },
-    { t: 'path', d: 'M86 73 Q100 58 114 73 Q118 90 105 106 Q100 113 95 106 Q82 90 86 73 Z', fill: P.beak },
-    { t: 'path', d: 'M100 61 Q103 84 100 108', stroke: '#CDBF9F', strokeWidth: 1.6 },
+    { t: 'path', d: 'M100 101 L100 105', stroke: R.line, strokeWidth: 1.8 },
+    { t: 'path', d: 'M92.5 105 Q100 118 107.5 105 Q100 107.5 92.5 105 Z', fill: '#6B2E2A' },
+    { t: 'path', d: 'M96.8 106 L96.8 111.5 Q98.4 112.5 99.8 111.5 L99.8 106.6 Z', fill: '#FFFFFF' },
+    { t: 'path', d: 'M100.2 106.6 L100.2 111.5 Q101.6 112.5 103.2 111.5 L103.2 106 Z', fill: '#FFFFFF' },
   ],
 };
 
-export type CompanionKind = 'dylan' | 'miso' | 'rio';
+export type CompanionKind = 'dylan' | 'miso' | 'noisette';
 
-export const COMPANION_ART: Record<CompanionKind, CompanionArt> = { dylan, miso, rio };
+export const COMPANION_ART: Record<CompanionKind, CompanionArt> = { dylan, miso, noisette };

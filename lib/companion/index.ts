@@ -4,12 +4,12 @@ import type { CompanionKind } from './art';
 export type { CompanionKind } from './art';
 export { COMPANION_ART } from './art';
 
-export const COMPANION_KINDS: CompanionKind[] = ['dylan', 'miso', 'rio'];
+export const COMPANION_KINDS: CompanionKind[] = ['dylan', 'miso', 'noisette'];
 
 export const COMPANION_NAMES: Record<CompanionKind, string> = {
   dylan: 'Dylan',
   miso: 'Miso',
-  rio: 'Rio',
+  noisette: 'Noisette',
 };
 
 /** What the companion knows about the user's day. */
@@ -63,22 +63,22 @@ const VOICE: Record<CompanionKind, { hello: Lines; idle: Lines }> = {
       ],
     },
   },
-  // A parrot: loves colour, repeats itself.
-  rio: {
+  // A rabbit: soft, gentle, a little bouncy.
+  noisette: {
     hello: {
-      fr: ['{hi} {name} ! {hi} ! {hi} !', 'Rio est là ! {hi} {name} !', 'Coucou {name} ! Coucou coucou !'],
-      en: ['{hi} {name}! {hi}! {hi}!', 'Rio is here! {hi} {name}!', 'Hello {name}! Hello hello!'],
+      fr: ['Hop hop ! {hi} {name} !', '{hi} {name} ! J’ai gardé une carotte pour toi.', '{hi} {name}, prêt·e à sautiller ?'],
+      en: ['Hop hop! {hi} {name}!', '{hi} {name}! I saved you a carrot.', '{hi} {name}, ready to hop into the day?'],
     },
     idle: {
       fr: [
-        'Jolie tenue ! Jolie tenue !',
-        'Rio adore les couleurs. Ose la couleur ! La couleur !',
-        'Un rouge, un bleu, un jaune… comme mes plumes ! Comme mes plumes !',
+        'Doux et confortable, c’est mon style. Et le tien ?',
+        'Un petit saut et on trouve ta tenue !',
+        'Mes oreilles me disent que tu vas être superbe aujourd’hui.',
       ],
       en: [
-        'Nice outfit! Nice outfit!',
-        'Rio loves colour. Dare the colour! The colour!',
-        'Red, blue, yellow… like my feathers! Like my feathers!',
+        'Soft and comfy, that’s my style. What’s yours?',
+        'One little hop and we’ll find your outfit!',
+        'My ears tell me you’ll look great today.',
       ],
     },
   },
@@ -161,6 +161,6 @@ export function companionReaction(
       en: ['All clean, smells great!', 'Laundry done. Mission accomplished.'],
     },
   };
-  const prefix = kind === 'dylan' ? (fr ? 'Ouaf ! ' : 'Woof! ') : kind === 'miso' ? (fr ? 'Miaou. ' : 'Meow. ') : 'Rrrio ! ';
+  const prefix = kind === 'dylan' ? (fr ? 'Ouaf ! ' : 'Woof! ') : kind === 'miso' ? (fr ? 'Miaou. ' : 'Meow. ') : fr ? 'Hop ! ' : 'Hop! ';
   return prefix + pick(bank[moment][fr ? 'fr' : 'en']);
 }
