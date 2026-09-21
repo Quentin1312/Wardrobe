@@ -41,82 +41,70 @@ const D = {
   merle: '#6E6964',
   merleLight: '#9A948E',
   tan: '#C4783A',
-  tanLight: '#DB9C58',
-  muzzle: '#48423E',
-  earInner: '#58524E',
+  tanLight: '#E0A566',
+  earInner: '#5A5450',
   blue: '#9CCEF0',
   brown: '#3A2216',
   pupil: '#110E0D',
 };
 
+// A sitting puppy seen from the front: round head resting on a pear-shaped
+// body, a proper snout, haunches and hind paws, plume tail.
 const dylan: CompanionArt = {
-  tailPivot: [128, 150],
+  tailPivot: [140, 168],
   tail: [
-    // soft plume curling up behind the back
-    { t: 'path', d: 'M124 156 C 158 158, 178 128, 170 100 C 166 86, 152 84, 148 96 C 158 108, 154 134, 122 140 Z', fill: D.charcoal },
-    { t: 'path', d: 'M150 98 C 160 110, 160 128, 144 140 C 156 126, 156 112, 150 98 Z', fill: D.merleLight, opacity: 0.75 },
-    { t: 'path', d: 'M170 100 C 166 88, 156 86, 150 94 C 160 94, 166 100, 170 108 Z', fill: D.merle },
+    { t: 'path', d: 'M138 178 C 184 178, 196 132, 172 104 C 160 92, 142 100, 148 116 C 160 132, 158 154, 132 160 Z', fill: D.charcoal },
+    { t: 'path', d: 'M154 116 C 168 128, 170 150, 154 164 C 162 148, 162 132, 154 116 Z', fill: D.merleLight, opacity: 0.7 },
+    { t: 'path', d: 'M172 104 C 162 94, 148 98, 148 108 C 158 104, 168 108, 176 116 Z', fill: D.merle },
   ],
   body: [
     SHADOW,
-    // upright, slim torso
-    { t: 'path', d: 'M60 128 Q52 164 68 189 L132 189 Q148 164 140 128 Q100 112 60 128 Z', fill: D.charcoal },
-    // merle mottling on the flanks
-    { t: 'ellipse', cx: 74, cy: 160, rx: 8, ry: 12, fill: D.merle, opacity: 0.9 },
-    { t: 'ellipse', cx: 127, cy: 156, rx: 7, ry: 11, fill: D.merle, opacity: 0.8 },
-    { t: 'ellipse', cx: 124, cy: 178, rx: 6, ry: 5, fill: D.merleLight, opacity: 0.7 },
-    // big soft neck ruff — one shape, gently lobed, the Pomeranian mane
-    { t: 'path', d: 'M46 96 C 38 118 50 140 66 150 C 74 158 88 160 100 160 C 112 160 126 158 134 150 C 150 140 162 118 154 96 C 142 116 58 116 46 96 Z', fill: D.charcoal },
-    { t: 'path', d: 'M56 118 C 54 132 62 144 72 150 C 66 140 62 130 64 120 Z', fill: D.merle, opacity: 0.8 },
-    { t: 'path', d: 'M144 118 C 146 132 138 144 128 150 C 134 140 138 130 136 120 Z', fill: D.merle, opacity: 0.8 },
-    // wide tan bib under the chin
-    { t: 'path', d: 'M66 114 Q100 146 134 114 Q132 142 100 156 Q68 142 66 114 Z', fill: D.tan },
-    // short tan front legs
-    { t: 'path', d: 'M80 160 L79 184 Q85 190 91 184 L92 160 Z', fill: D.tan },
-    { t: 'path', d: 'M108 160 L109 184 Q115 190 121 184 L120 160 Z', fill: D.tan },
-    // chest fluff falling over the top of the legs
-    { t: 'ellipse', cx: 85, cy: 188, rx: 9, ry: 4, fill: D.tanLight },
-    { t: 'ellipse', cx: 115, cy: 188, rx: 9, ry: 4, fill: D.tanLight },
+    // haunches and hind paws
+    { t: 'ellipse', cx: 70, cy: 170, rx: 25, ry: 20, fill: D.charcoal },
+    { t: 'ellipse', cx: 130, cy: 170, rx: 25, ry: 20, fill: D.charcoal },
+    { t: 'ellipse', cx: 57, cy: 188, rx: 13, ry: 6, fill: D.tan },
+    { t: 'ellipse', cx: 143, cy: 188, rx: 13, ry: 6, fill: D.tan },
+    // pear-shaped torso
+    { t: 'path', d: 'M72 116 Q64 150 74 187 L126 187 Q136 150 128 116 Q100 102 72 116 Z', fill: D.charcoal },
+    // merle mottling
+    { t: 'ellipse', cx: 62, cy: 164, rx: 9, ry: 7, fill: D.merle },
+    { t: 'ellipse', cx: 138, cy: 160, rx: 8, ry: 10, fill: D.merleLight, opacity: 0.7 },
+    { t: 'ellipse', cx: 116, cy: 138, rx: 6, ry: 5, fill: D.merle },
+    // small tan chest patch
+    { t: 'path', d: 'M86 120 Q100 132 114 120 Q116 144 100 154 Q84 144 86 120 Z', fill: D.tan },
+    // front legs and paws
+    { t: 'path', d: 'M87 148 Q84 168 83 184 Q89 190 95 184 Q95 166 97 148 Z', fill: D.tan },
+    { t: 'path', d: 'M103 148 Q105 166 105 184 Q111 190 117 184 Q116 168 113 148 Z', fill: D.tan },
+    { t: 'ellipse', cx: 88, cy: 188, rx: 9, ry: 4.5, fill: D.tanLight },
+    { t: 'ellipse', cx: 112, cy: 188, rx: 9, ry: 4.5, fill: D.tanLight },
+    { t: 'path', d: 'M86 186 L86 190 M90 186 L90 190 M110 186 L110 190 M114 186 L114 190', stroke: D.tan, strokeWidth: 1.4 },
   ],
-  neck: [100, 124],
+  neck: [100, 118],
   head: [
-    // small rounded ears, fluffy dark with a greyish inside
-    { t: 'path', d: 'M60 64 Q56 40 69 30 Q84 36 88 54 Z', fill: D.black },
-    { t: 'path', d: 'M65 58 Q63 43 70 37 Q79 42 82 53 Z', fill: D.earInner },
-    { t: 'path', d: 'M140 64 Q144 40 131 30 Q116 36 112 54 Z', fill: D.black },
-    { t: 'path', d: 'M135 58 Q137 43 130 37 Q121 42 118 53 Z', fill: D.earInner },
-    // head with a few cheek tufts (no scalloped outline)
-    {
-      t: 'path',
-      d: 'M100 40 C 112 38 120 43 127 46 C 141 52 147 65 148 80 C 156 88 157 101 148 108 C 152 116 143 123 132 120 C 124 129 111 134 100 134 C 89 134 76 129 68 120 C 57 123 48 116 52 108 C 43 101 44 88 52 80 C 53 65 59 52 73 46 C 80 43 88 38 100 40 Z',
-      fill: D.black,
-    },
-    // grey merle on the forehead
-    { t: 'path', d: 'M104 45 Q122 44 132 56 Q118 58 107 53 Z', fill: D.merle, opacity: 0.75 },
-    { t: 'path', d: 'M74 50 Q84 45 92 47 Q84 52 76 56 Z', fill: D.merle, opacity: 0.5 },
-    // fur wisps breaking up the outline
-    { t: 'path', d: 'M91 43 Q94 34 99 41 M102 41 Q107 33 110 43', stroke: D.black, strokeWidth: 3.2 },
-    // tan eyebrow spots
-    { t: 'ellipse', cx: 82, cy: 65, rx: 6.5, ry: 4, fill: D.tanLight },
-    { t: 'ellipse', cx: 118, cy: 65, rx: 6.5, ry: 4, fill: D.tanLight },
-    // tan cheeks sweeping down to the chin
-    { t: 'path', d: 'M60 92 Q68 118 92 120 Q84 106 86 95 Q73 99 60 92 Z', fill: D.tan },
-    { t: 'path', d: 'M140 92 Q132 118 108 120 Q116 106 114 95 Q127 99 140 92 Z', fill: D.tan },
-    { t: 'path', d: 'M62 97 Q100 103 138 97 Q134 138 100 146 Q66 138 62 97 Z', fill: D.tan },
-    // dark grey muzzle with tan lips
-    { t: 'ellipse', cx: 100, cy: 101, rx: 13.5, ry: 10.5, fill: D.muzzle },
-    { t: 'path', d: 'M88 104 Q92 116 100 116 Q108 116 112 104 Q107 110 100 110 Q93 110 88 104 Z', fill: D.tanLight },
-    // nose
-    { t: 'path', d: 'M91 95 Q100 90 109 95 Q107 102 100 103 Q93 102 91 95 Z', fill: D.black },
-    { t: 'ellipse', cx: 96.5, cy: 94.5, rx: 3, ry: 1.5, fill: '#FFFFFF', opacity: 0.4 },
+    // upright ears
+    { t: 'path', d: 'M58 70 Q55 42 64 24 Q80 32 92 52 Z', fill: D.black },
+    { t: 'path', d: 'M64 62 Q62 44 68 33 Q78 41 85 53 Z', fill: D.earInner },
+    { t: 'path', d: 'M142 70 Q145 42 136 24 Q120 32 108 52 Z', fill: D.black },
+    { t: 'path', d: 'M136 62 Q138 44 132 33 Q122 41 115 53 Z', fill: D.earInner },
+    // round head with small cheek fluff
+    { t: 'path', d: 'M100 40 C 130 40 148 60 148 84 C 154 90 152 102 144 104 C 138 118 120 126 100 126 C 80 126 62 118 56 104 C 48 102 46 90 52 84 C 52 60 70 40 100 40 Z', fill: D.black },
+    { t: 'path', d: 'M104 44 Q124 46 134 60 Q120 60 108 54 Z', fill: D.merle, opacity: 0.7 },
+    // tan brows and cheeks
+    { t: 'ellipse', cx: 82, cy: 66, rx: 6.5, ry: 4, fill: D.tanLight },
+    { t: 'ellipse', cx: 118, cy: 66, rx: 6.5, ry: 4, fill: D.tanLight },
+    { t: 'path', d: 'M62 94 Q66 121 100 125 Q134 121 138 94 Q120 103 100 101 Q80 103 62 94 Z', fill: D.tan },
+    // the snout
+    { t: 'path', d: 'M80 98 Q100 86 120 98 Q124 116 100 121 Q76 116 80 98 Z', fill: D.tanLight },
+    { t: 'path', d: 'M91 95 Q100 89 109 95 Q107 103 100 104 Q93 103 91 95 Z', fill: D.black },
+    { t: 'ellipse', cx: 96.5, cy: 94, rx: 3, ry: 1.5, fill: '#FFFFFF', opacity: 0.45 },
   ],
   // one ice-blue eye, one dark brown — like the real Dylan
   eyes: [
-    { t: 'ellipse', cx: 83, cy: 79, rx: 8.5, ry: 8, fill: D.blue },
-    { t: 'circle', cx: 83.5, cy: 79.5, r: 4.3, fill: D.pupil },
+    { t: 'circle', cx: 83, cy: 79, r: 8.5, fill: D.blue },
+    { t: 'circle', cx: 83.5, cy: 79.5, r: 4.4, fill: D.pupil },
     { t: 'circle', cx: 80.5, cy: 76.5, r: 2.2, fill: '#FFFFFF' },
-    { t: 'ellipse', cx: 117, cy: 79, rx: 8.5, ry: 8, fill: D.brown },
-    { t: 'circle', cx: 116.5, cy: 79.5, r: 4.3, fill: D.pupil },
+    { t: 'circle', cx: 117, cy: 79, r: 8.5, fill: D.brown },
+    { t: 'circle', cx: 116.5, cy: 79.5, r: 4.4, fill: D.pupil },
     { t: 'circle', cx: 114, cy: 76.5, r: 2.2, fill: '#FFFFFF' },
   ],
   lidTop: 70,
@@ -125,12 +113,11 @@ const dylan: CompanionArt = {
     { t: 'ellipse', cx: 117, cy: 79, rx: 10.5, ry: 10, fill: D.black },
   ],
   mouthIdle: [
-    { t: 'path', d: 'M100 104 Q100 110 94 111 M100 104 Q100 110 106 111', stroke: D.black, strokeWidth: 2 },
+    { t: 'path', d: 'M100 104 Q100 110 94 112 M100 104 Q100 110 106 112', stroke: D.black, strokeWidth: 2 },
   ],
-  // open, tongue out — the photo pose
   mouthHappy: [
-    { t: 'path', d: 'M91 107 Q100 124 109 107 Q100 111 91 107 Z', fill: '#2E1210' },
-    { t: 'ellipse', cx: 100, cy: 116, rx: 5.5, ry: 4.5, fill: '#E98686' },
+    { t: 'path', d: 'M90 108 Q100 124 110 108 Q100 112 90 108 Z', fill: '#2E1210' },
+    { t: 'ellipse', cx: 100, cy: 117, rx: 5, ry: 4.5, fill: '#E98686' },
   ],
 };
 
