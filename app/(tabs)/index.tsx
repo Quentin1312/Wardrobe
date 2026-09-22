@@ -139,6 +139,7 @@ export default function Today() {
                 source={{ uri: profile.profile_photo_clean_url ?? profile.profile_photo_url ?? '' }}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
+                contentPosition="top"
                 cachePolicy="memory-disk"
               />
             ) : (

@@ -87,6 +87,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="add-item" options={{ presentation: 'modal' }} />
         <Stack.Screen name="item/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="body-photo" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );

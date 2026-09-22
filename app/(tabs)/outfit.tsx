@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,6 +48,7 @@ export default function OutfitDay() {
   const { colors, dark } = useTheme();
   const { session, profile } = useAuth();
   const { t } = useLocale();
+  const router = useRouter();
   const { state } = useWeather();
   const weather = state.status === 'ready' ? state.weather : null;
 
@@ -482,6 +483,10 @@ export default function OutfitDay() {
         garmentCount={tryOnCount}
         onClose={() => setTryOnOpen(false)}
         onGenerate={runTryOn}
+        onAddPhoto={() => {
+          setTryOnOpen(false);
+          router.push('/body-photo');
+        }}
       />
     </SafeAreaView>
   );

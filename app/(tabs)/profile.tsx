@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,7 +40,8 @@ export default function Profile() {
             }}
           >
             {photo ? (
-              <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} />
+              // Full-body try-on photo: keep the face in the circle.
+              <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} contentFit="cover" contentPosition="top" />
             ) : (
               <Text style={[typography.small, { color: colors.textMuted }]}>
                 {t('profile.noPhoto')}
@@ -58,6 +60,7 @@ export default function Profile() {
         <SettingRow label={t('profile.theme')}>
           <ThemeSwitch />
         </SettingRow>
+        <BodyPhotoRow />
         <CompanionRow />
 
         <View style={{ flex: 1 }} />
@@ -84,6 +87,43 @@ function SettingRow({ label, children }: { label: string; children: ReactNode })
       <Text style={[typography.bodyStrong, { color: colors.text }]}>{label}</Text>
       {children}
     </View>
+  );
+}
+
+/** The full-body photo used for AI try-on, and a shortcut to retake it. */
+function BodyPhotoRow() {
+  const { colors } = useTheme();
+  const { t } = useLocale();
+  const { profile } = useAuth();
+  const router = useRouter();
+  const photo = profile?.profile_photo_url;
+  return (
+    <Pressable
+      onPress={() => router.push('/body-photo')}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
+      })}
+    >
+      <View style={{ width: 42, height: 56, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+        {photo ? (
+          <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        ) : (
+          <Ionicons name="body-outline" size={22} color={colors.textMuted} />
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[typography.bodyStrong, { color: colors.text }]}>{t('body.change')}</Text>
+        <Text style={[typography.small, { color: colors.textMuted }]}>{photo ? t('body.tip1') : t('profile.noPhoto')}</Text>
+      </View>
+      <Text style={[typography.caption, { color: colors.accent }]}>{t('body.changeCta')}</Text>
+      <Ionicons name="chevron-forward" size={18} color={colors.accent} />
+    </Pressable>
   );
 }
 

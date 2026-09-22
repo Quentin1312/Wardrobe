@@ -222,3 +222,60 @@ export async function checkCutout(url: string): Promise<CutoutIssue[]> {
   if (!img) return [];
   return cutoutIssues(measureAlpha(img.data, img.width, img.height));
 }
+
+// ---------------------------------------------------------------------------
+// Try-on photo of the user (full body, facing the camera)
+// ---------------------------------------------------------------------------
+
+export type BodyIssue = 'dark' | 'bright' | 'blurry' | 'landscape' | 'busyBackground' | 'cutOff' | 'tooFar';
+
+export function bodyIssuesFromMetrics(m: PhotoMetrics, width: number, height: number, edges: { top: number; bottom: number }): BodyIssue[] {
+  const issues: BodyIssue[] = [];
+  if (height < width * 1.15) issues.push('landscape');
+  if (m.brightness < 90) issues.push('dark');
+  // No 'bright' here: a white wall behind the person is ideal, not overexposure.
+  if (m.sharpness < 14) issues.push('blurry');
+  if (m.borderNoise > 38) {
+    // Framing can't be judged on a busy background; the AI check covers it.
+    issues.push('busyBackground');
+    return issues;
+  }
+  // Head touching the top of the frame means it's cut off. (The floor makes the
+  // bottom edge unreliable: feet are left to the AI check.)
+  if (edges.top > 0.07) issues.push('cutOff');
+  else if (m.bboxArea > 0 && m.bboxArea < 0.12) issues.push('tooFar');
+  return issues;
+}
+
+/**
+ * Widest compact blob crossing the top and bottom rows, relative to the rest
+ * of their own row. Comparing with the row itself (not the whole border) ignores gradients
+ * and vignetting: only a compact object such as a head crossing the edge counts.
+ */
+export function topBottomEdges(data: Uint8Array | Uint8ClampedArray, width: number, height: number) {
+  const row = (y: number) => {
+    const pixels: RGB[] = [];
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      pixels.push([data[i], data[i + 1], data[i + 2]]);
+    }
+    const ref: RGB = [0, 1, 2].map((c) => median(pixels.map((p) => p[c]))) as RGB;
+    // Longest run of standing-out pixels in the central 70% (corners vignette).
+    let run = 0;
+    let best = 0;
+    for (let x = Math.floor(width * 0.15); x < Math.ceil(width * 0.85); x++) {
+      const p = pixels[x];
+      run = Math.hypot(p[0] - ref[0], p[1] - ref[1], p[2] - ref[2]) > FG_DIST ? run + 1 : 0;
+      if (run > best) best = run;
+    }
+    return best / width;
+  };
+  return { top: row(0), bottom: row(height - 1) };
+}
+
+export async function checkBodyPhoto(uri: string): Promise<BodyIssue[] | null> {
+  const img = await samplePixels(uri, 240, `body-${Date.now()}`);
+  if (!img) return null;
+  const metrics = measurePixels(img.data, img.width, img.height);
+  return bodyIssuesFromMetrics(metrics, img.width, img.height, topBottomEdges(img.data, img.width, img.height));
+}

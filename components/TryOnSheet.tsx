@@ -12,12 +12,15 @@ export function TryOnSheet({
   garmentCount,
   onClose,
   onGenerate,
+  onAddPhoto,
 }: {
   visible: boolean;
   modelPhoto: string | null;
   garmentCount: number;
   onClose: () => void;
   onGenerate: () => Promise<TryOnResponse>;
+  /** Opens the try-on photo screen when the user has none yet. */
+  onAddPhoto?: () => void;
 }) {
   const { colors, dark } = useTheme();
   const { t } = useLocale();
@@ -176,9 +179,17 @@ export function TryOnSheet({
                   <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.consent')}</Text>
                 </Pressable>
                 {!modelPhoto ? (
-                  <Text style={[typography.caption, { color: colors.danger, textAlign: 'center' }]}>
-                    {t('tryon.needPhoto')}
-                  </Text>
+                  <View style={{ alignItems: 'center', gap: spacing.sm }}>
+                    <Text style={[typography.caption, { color: colors.danger, textAlign: 'center' }]}>
+                      {t('tryon.needPhoto')}
+                    </Text>
+                    {onAddPhoto ? (
+                      <Pressable onPress={onAddPhoto} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="camera-outline" size={17} color={colors.accent} />
+                        <Text style={[typography.bodyStrong, { color: colors.accent }]}>{t('tryon.addPhoto')}</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                 ) : null}
               </>
             )}
