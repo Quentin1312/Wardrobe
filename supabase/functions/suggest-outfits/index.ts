@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
     const assignment = isWeek
       ? `Planifie exactement une tenue pour chacun de ces jours :\n${weekDays
           .map((day) => `- ${day.date} : ${day.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : 'météo inconnue'}`)
-          .join('\n')}\n\nDiversifie la semaine et évite de réutiliser les mêmes pièces quand la garde-robe le permet.`
+          .join('\n')}\n\nDiversifie la semaine quand la garde-robe le permet. Si elle est petite, réutilise les mêmes pièces sans hésiter en variant les associations : mieux vaut sept tenues avec des répétitions qu'une semaine incomplète. Renvoie TOUJOURS une tenue pour chacun des jours demandés.`
       : `Météo du jour : ${weatherLine}.\n\nCompose ${Math.min(Number(count) || 3, 7)} tenues cohérentes et adaptées à la météo.`;
 
     const outputShape = isWeek
