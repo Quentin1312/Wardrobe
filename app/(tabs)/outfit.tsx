@@ -119,7 +119,9 @@ export default function OutfitDay() {
             const [planned] = await fetchWeeklyOutfits(userId, [dateKey(new Date())]);
             if (planned && validLook(planned.clothes_ids, items)) {
               setIdx(indicesForIds(next, planned.clothes_ids));
-              setAccessoryIds(next.accessory.filter((piece) => planned.clothes_ids.includes(piece.id)).map((piece) => piece.id));
+              setAccessoryIds(
+                next.accessory.filter((piece) => planned.clothes_ids.includes(piece.id)).map((piece) => piece.id)
+              );
               setRationale(planned.rationale);
             }
           }
@@ -175,7 +177,7 @@ export default function OutfitDay() {
     const ids = selectedIds();
     if (!validLook(ids, Object.values(buckets).flat())) return;
     void AsyncStorage.setItem(draftKey(userId), JSON.stringify({ ids, rationale }));
-  }, [draftReady, userId, locked, hasRequired, idx, buckets, rationale, selectedIds]);
+  }, [draftReady, userId, locked, hasRequired, idx, accessoryIds, buckets, rationale, selectedIds]);
 
   function resetSavedState() {
     setSaved(false);
