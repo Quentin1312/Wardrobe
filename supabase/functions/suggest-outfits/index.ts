@@ -190,8 +190,10 @@ ${taste}
 ${assignment}
 
 Chaque tenue doit
-combiner idéalement un haut + un bas + des chaussures, et éventuellement une
-veste ou un accessoire s'ils conviennent. N'utilise QUE les id fournis ci-dessus.
+combiner idéalement un haut + un bas + des chaussures, plus une veste si la
+météo ou le style le demandent. Ajoute aussi un accessoire dès qu'il apporte
+quelque chose à la tenue (casquette, montre, sac, ceinture) : n'en mets pas à
+tout prix, mais ne l'oublie pas. N'utilise QUE les id fournis ci-dessus.
 Vérifie la compatibilité des couleurs et la cohérence de style.
 Fais tourner la garde-robe : évite les pièces portées il y a moins de 3 jours
 quand une alternative cohérente existe, et remets en avant les pièces oubliées

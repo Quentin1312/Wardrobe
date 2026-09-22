@@ -169,10 +169,10 @@ function AccessoryPicker({
               accessibilityLabel={item.name ?? t('category.accessory')}
               onPress={() => onSelect(on ? null : item)}
               style={({ pressed }) => ({
-                width: 54,
-                height: 54,
+                width: 66,
+                height: 66,
                 borderRadius: radius.md,
-                padding: 5,
+                padding: 7,
                 backgroundColor: on ? '#EFEEE9' : colors.surfaceAlt,
                 borderWidth: on ? 2 : 1,
                 borderColor: on ? colors.accent : colors.border,
