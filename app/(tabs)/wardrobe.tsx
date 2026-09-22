@@ -14,8 +14,9 @@ import { useLocale } from '@/context/LocaleContext';
 import { cleanMissingBackgrounds, fetchClothes, setClothingColor, washAll } from '@/lib/clothes';
 import { colorName, extractDominantColor } from '@/lib/color';
 import type { Clothing, ClothingCategory } from '@/lib/types';
+import { FORGOTTEN_DAYS, fetchWearStats, isForgotten, wornLabel, type WearStat } from '@/lib/wear';
 
-type Filter = ClothingCategory | 'all' | 'fav' | 'dirty';
+type Filter = ClothingCategory | 'all' | 'fav' | 'dirty' | 'forgotten';
 
 // Pieces whose colour we already tried to read this session (don't retry forever).
 const colorAttempted = new Set<string>();
@@ -28,6 +29,7 @@ export default function Wardrobe() {
   const userId = session?.user?.id;
 
   const [items, setItems] = useState<Clothing[]>([]);
+  const [wear, setWear] = useState<Map<string, WearStat>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
   const [washing, setWashing] = useState(false);
@@ -55,8 +57,12 @@ export default function Wardrobe() {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const fetched = await fetchClothes(userId);
+      const [fetched, stats] = await Promise.all([
+        fetchClothes(userId),
+        fetchWearStats(userId).catch(() => new Map<string, WearStat>()),
+      ]);
       setItems(fetched);
+      setWear(stats);
       backfillColors(fetched);
     } catch {
       // empty state covers it
@@ -73,6 +79,7 @@ export default function Wardrobe() {
   );
   const hasFavorites = items.some((i) => i.favorite);
   const dirtyCount = items.filter((i) => i.dirty).length;
+  const forgotten = useMemo(() => items.filter((i) => isForgotten(i, wear.get(i.id))), [items, wear]);
   const pendingCleanCount = items.filter((i) => !i.photo_clean_url).length;
 
   const shown =
@@ -82,7 +89,9 @@ export default function Wardrobe() {
         ? items.filter((i) => i.favorite)
         : filter === 'dirty'
           ? items.filter((i) => i.dirty)
-          : items.filter((i) => i.category === filter);
+          : filter === 'forgotten'
+            ? forgotten
+            : items.filter((i) => i.category === filter);
 
   function onWashAll() {
     if (!userId || dirtyCount === 0) return;
@@ -242,6 +251,14 @@ export default function Wardrobe() {
                     onPress={() => setFilter('dirty')}
                   />
                 ) : null}
+                {forgotten.length > 0 ? (
+                  <Chip
+                    label={`${t('wardrobe.forgotten')} · ${forgotten.length}`}
+                    icon="time-outline"
+                    active={filter === 'forgotten'}
+                    onPress={() => setFilter('forgotten')}
+                  />
+                ) : null}
                 {usedCategories.map((c) => (
                   <Chip
                     key={c.key}
@@ -273,6 +290,12 @@ export default function Wardrobe() {
                 </Pressable>
               ) : null}
 
+              {filter === 'forgotten' ? (
+                <Text style={[typography.small, { color: colors.textMuted, marginTop: spacing.sm }]}>
+                  {t('wardrobe.forgottenHint', { days: FORGOTTEN_DAYS })}
+                </Text>
+              ) : null}
+
               {laundryError ? (
                 <Pressable
                   onPress={() => setLaundryError(null)}
@@ -296,7 +319,12 @@ export default function Wardrobe() {
             </View>
           }
           renderItem={({ item }) => (
-            <ClothingCard item={item} onPress={() => router.push(`/item/${item.id}`)} />
+            <ClothingCard
+              item={item}
+              wear={wear.get(item.id)}
+              forgotten={forgotten.includes(item)}
+              onPress={() => router.push(`/item/${item.id}`)}
+            />
           )}
         />
       )}
@@ -348,7 +376,17 @@ function Chip({
   );
 }
 
-function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }) {
+function ClothingCard({
+  item,
+  wear,
+  forgotten,
+  onPress,
+}: {
+  item: Clothing;
+  wear: WearStat | undefined;
+  forgotten: boolean;
+  onPress: () => void;
+}) {
   const { colors } = useTheme();
   const { t, locale } = useLocale();
   const uri = item.photo_clean_url ?? item.photo_url;
@@ -414,7 +452,7 @@ function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }
         ) : null}
       </View>
 
-      <View style={{ minHeight: 52, paddingHorizontal: 11, paddingVertical: 9, gap: 2 }}>
+      <View style={{ minHeight: 68, paddingHorizontal: 11, paddingVertical: 9, gap: 2 }}>
         <Text numberOfLines={1} style={[typography.bodyStrong, { color: colors.text }]}>
           {item.name ?? t(categoryKey(item.category))}
         </Text>
@@ -434,6 +472,15 @@ function ClothingCard({ item, onPress }: { item: Clothing; onPress: () => void }
           <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, flexShrink: 1 }]}>
             {t(categoryKey(item.category))}
             {item.dominant_color ? ` · ${colorName(item.dominant_color, locale) ?? ''}` : ''}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="time-outline" size={11} color={forgotten ? colors.accent : colors.textMuted} />
+          <Text
+            numberOfLines={1}
+            style={[typography.caption, { color: forgotten ? colors.accent : colors.textMuted, flexShrink: 1 }]}
+          >
+            {wornLabel(wear, t)}
           </Text>
         </View>
       </View>

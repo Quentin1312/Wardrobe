@@ -9,6 +9,8 @@ import { useTheme } from '@/context/ThemeContext';
 import { fetchClothes } from '@/lib/clothes';
 import { COMPANION_NAMES, companionLines } from '@/lib/companion';
 import { fetchTodaysWornOutfit } from '@/lib/outfits';
+import { fetchWearStats, mostForgotten } from '@/lib/wear';
+import { categoryKey } from '@/constants/categories';
 import { CompanionAvatar } from './CompanionAvatar';
 import { SpeechBubble } from './SpeechBubble';
 
@@ -20,11 +22,12 @@ export function CompanionCard({ temp, weatherMain }: { temp: number | null; weat
   const { colors } = useTheme();
   const { kind } = useCompanion();
   const { session, profile } = useAuth();
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
 
   const [dirtyCount, setDirtyCount] = useState(0);
   const [lookValidated, setLookValidated] = useState(false);
   const [index, setIndex] = useState(0);
+  const [forgotten, setForgotten] = useState<{ label: string; days: number | null } | null>(null);
 
   const userId = session?.user?.id;
 
@@ -32,9 +35,11 @@ export function CompanionCard({ temp, weatherMain }: { temp: number | null; weat
     useCallback(() => {
       if (!userId) return;
       let alive = true;
-      Promise.all([fetchClothes(userId), fetchTodaysWornOutfit(userId)])
-        .then(([items, worn]) => {
+      Promise.all([fetchClothes(userId), fetchTodaysWornOutfit(userId), fetchWearStats(userId).catch(() => null)])
+        .then(([items, worn, stats]) => {
           if (!alive) return;
+          const pick = stats ? mostForgotten(items, stats) : null;
+          setForgotten(pick ? { label: pick.item.name ?? t(categoryKey(pick.item.category)), days: pick.days } : null);
           setDirtyCount(items.filter((item) => item.dirty).length);
           setLookValidated(Boolean(worn));
           setIndex(0);
@@ -43,7 +48,7 @@ export function CompanionCard({ temp, weatherMain }: { temp: number | null; weat
       return () => {
         alive = false;
       };
-    }, [userId])
+    }, [userId, t])
   );
 
   const lines = useMemo(
@@ -57,13 +62,14 @@ export function CompanionCard({ temp, weatherMain }: { temp: number | null; weat
               weatherMain,
               dirtyCount,
               lookValidated,
+              forgotten,
               hour: new Date().getHours(),
             },
             locale
           )
         : [],
     // Recompute when the facts change, not on every render.
-    [kind, profile?.first_name, temp, weatherMain, dirtyCount, lookValidated, locale]
+    [kind, profile?.first_name, temp, weatherMain, dirtyCount, lookValidated, forgotten, locale]
   );
 
   if (!kind || lines.length === 0) return null;

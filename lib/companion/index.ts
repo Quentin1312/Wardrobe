@@ -21,6 +21,8 @@ export interface CompanionContext {
   dirtyCount: number;
   lookValidated: boolean;
   hour: number;
+  /** The piece left in the closet the longest (days = null: never worn). */
+  forgotten?: { label: string; days: number | null } | null;
 }
 
 type Lines = { fr: string[]; en: string[] };
@@ -116,6 +118,20 @@ export function companionLines(kind: CompanionKind, ctx: CompanionContext, local
     lines.push(fr ? `${ctx.temp}° dehors : léger et respirant aujourd’hui.` : `${ctx.temp}° out: keep it light today.`);
   } else if (ctx.temp !== null) {
     lines.push(fr ? `${ctx.temp}°, parfait pour une tenue mi-saison.` : `${ctx.temp}°, perfect for an in-between look.`);
+  }
+
+  // A forgotten piece deserves a comeback (only while the look is still open).
+  if (ctx.forgotten && !ctx.lookValidated) {
+    const { label, days } = ctx.forgotten;
+    lines.push(
+      days === null
+        ? fr
+          ? `« ${label} » n’a encore jamais quitté ton placard. C’est le jour ?`
+          : `“${label}” has never left your closet. Today’s the day?`
+        : fr
+          ? `Ça fait ${days} jours que « ${label} » attend dans ton placard. Une sortie aujourd’hui ?`
+          : `“${label}” has been waiting ${days} days in your closet. Take it out today?`
+    );
   }
 
   // Today's look

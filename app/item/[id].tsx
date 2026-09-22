@@ -26,6 +26,7 @@ import {
   setClothingFavorite,
 } from '@/lib/clothes';
 import type { Clothing } from '@/lib/types';
+import { daysSince, fetchWearStats, wornLabel, type WearStat } from '@/lib/wear';
 
 export default function ItemSheet() {
   const { colors } = useTheme();
@@ -40,6 +41,8 @@ export default function ItemSheet() {
   const [msg, setMsg] = useState<string | null>(null);
   const [nameSaved, setNameSaved] = useState(false);
   const [showBasket, setShowBasket] = useState(false);
+  const [wear, setWear] = useState<WearStat | undefined>(undefined);
+  const [wearLoaded, setWearLoaded] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -47,6 +50,12 @@ export default function ItemSheet() {
       const found = await fetchClothing(id);
       setItem(found);
       setName(found?.name ?? '');
+      if (found) {
+        fetchWearStats(found.user_id)
+          .then((stats) => setWear(stats.get(found.id)))
+          .catch(() => {})
+          .finally(() => setWearLoaded(true));
+      }
     } finally {
       setLoading(false);
     }
@@ -266,6 +275,19 @@ export default function ItemSheet() {
               value={colorName(item.dominant_color, locale) ?? item.dominant_color}
               swatch={item.dominant_color}
             />
+          ) : null}
+          {wearLoaded ? (
+            <>
+              <Row
+                label={t('item.lastWorn')}
+                value={
+                  wear && daysSince(wear.last) > 1
+                    ? `${wornLabel(wear, t)} · ${new Date(wear.last).toLocaleDateString(locale, { day: 'numeric', month: 'long' })}`
+                    : wornLabel(wear, t)
+                }
+              />
+              {wear ? <Row label={t('item.wornCount')} value={t('item.wornTimes', { count: wear.count })} /> : null}
+            </>
           ) : null}
           <Row label={t('item.addedOn')} value={added} />
         </View>

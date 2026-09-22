@@ -112,12 +112,35 @@ Deno.serve(async (req) => {
       : [];
     const isWeek = mode === 'week' && weekDays.length > 0;
 
+    // Wear history: last time each piece was part of a validated look.
+    const { data: wornRows } = await supabase
+      .from('outfits')
+      .select('clothes_ids, generated_at')
+      .eq('user_id', userId)
+      .eq('liked', true)
+      .order('generated_at', { ascending: false })
+      .limit(300);
+    const lastWorn = new Map<string, number>();
+    const today = Date.now();
+    for (const row of wornRows ?? []) {
+      for (const id of (row.clothes_ids as string[] | null) ?? []) {
+        if (!lastWorn.has(id)) {
+          lastWorn.set(id, Math.floor((today - new Date(row.generated_at as string).getTime()) / 86_400_000));
+        }
+      }
+    }
+    const wornText = (id: string) => {
+      const d = lastWorn.get(id);
+      if (d === undefined) return 'jamais';
+      return d === 0 ? "aujourd'hui" : `il y a ${d} j`;
+    };
+
     const catalog = items
       .map(
         (c) =>
           `- id:${c.id} | ${c.name ? `nom:"${c.name}" | ` : ''}catégorie:${c.category ?? '?'} | couleur:${
             colorFr(c.dominant_color) ?? '?'
-          } | tags:${(c.style_tags ?? []).join(',') || '-'}`
+          } | tags:${(c.style_tags ?? []).join(',') || '-'} | portée:${wornText(c.id)}`
       )
       .join('\n');
 
@@ -170,6 +193,9 @@ Chaque tenue doit
 combiner idéalement un haut + un bas + des chaussures, et éventuellement une
 veste ou un accessoire s'ils conviennent. N'utilise QUE les id fournis ci-dessus.
 Vérifie la compatibilité des couleurs et la cohérence de style.
+Fais tourner la garde-robe : évite les pièces portées il y a moins de 3 jours
+quand une alternative cohérente existe, et remets en avant les pièces oubliées
+(portée il y a 30 j ou plus, ou jamais) quand elles vont avec la tenue.
 
 Réponds STRICTEMENT en JSON avec ce format :
 ${outputShape}`;
