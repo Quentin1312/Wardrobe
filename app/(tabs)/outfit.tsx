@@ -16,13 +16,13 @@ import { OutfitConfirmed } from '@/components/OutfitConfirmed';
 import { ShareLookButton } from '@/components/ShareLookButton';
 import { fetchClothes, markOutfitDirty, setClothingDirty } from '@/lib/clothes';
 import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked } from '@/lib/outfits';
-import { generateTryOn } from '@/lib/tryon';
+import { generateTryOn, type TryOnResponse } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { weatherContext } from '@/lib/weather';
 import { dateKey } from '@/lib/week';
 
 const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
-const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket'];
+const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket', 'shoes'];
 
 type Buckets = Record<ClothingCategory, Clothing[]>;
 type Indices = Record<ClothingCategory, number>;
@@ -244,13 +244,13 @@ export default function OutfitDay() {
     setLocked(worn);
   }
 
-  async function runTryOn() {
+  async function runTryOn(): Promise<TryOnResponse> {
     // The rendering service needs an outfit row, but this is only a draft:
     // trying clothes on must never lock them as today's worn look.
     const outfitId = await persistCurrentOutfit(false);
     const result = await generateTryOn(outfitId);
     if (!result.url) throw new Error(result.error ?? t('tryon.error'));
-    return result.url;
+    return result;
   }
 
   const counts = {

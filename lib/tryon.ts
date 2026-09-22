@@ -1,8 +1,15 @@
 import { supabase } from '@/lib/supabase';
 
-interface TryOnResponse {
+export interface TryOnResponse {
   url?: string;
   error?: string;
+  /** Every garment and the face passed the automatic check. */
+  verified?: boolean;
+  /** The automatic check ran (false: it was unavailable). */
+  checked?: boolean;
+  /** Remaining differences spotted by the check, in French. */
+  warnings?: string[];
+  attempts?: number;
 }
 
 export async function generateTryOn(outfitId: string): Promise<TryOnResponse> {

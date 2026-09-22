@@ -1,11 +1,28 @@
-// Authenticated virtual try-on pipeline.
-// Secret: supabase secrets set FASHN_API_KEY=...
-// Deploy: supabase functions deploy generate-tryon
+// Authenticated virtual try-on via OpenAI GPT Image, with garment guardrails.
+// Secret:   supabase secrets set OPENAI_API_KEY=...
+// Optional: OPENAI_IMAGE_MODEL (default gpt-image-2.5-flare), OPENAI_TRYON_QUALITY (default medium),
+//           OPENAI_JUDGE_MODEL (default gpt-5-mini)
+// Deploy:   supabase functions deploy generate-tryon
+//
+// Pipeline:
+// 1. One image edit: the user's photo + a reference image per garment, with a
+//    strict "copy the garments exactly" brief listing each piece.
+// 2. Guardrail: a vision model compares the result with every reference
+//    (colour, pattern, logos, cut, details) and with the person's face.
+// 3. If something drifted, one corrective attempt that names the problems;
+//    the attempt with the fewest problems wins.
+// 4. The result is stored privately; any remaining doubt is returned to the
+//    app as warnings instead of being hidden.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
-const FASHN_API_KEY = Deno.env.get('FASHN_API_KEY');
-const FASHN_BASE_URL = 'https://api.fashn.ai/v1';
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const IMAGE_MODEL = Deno.env.get('OPENAI_IMAGE_MODEL') ?? 'gpt-image-2.5-flare';
+const QUALITY = Deno.env.get('OPENAI_TRYON_QUALITY') ?? 'medium';
+const JUDGE_MODEL = Deno.env.get('OPENAI_JUDGE_MODEL') ?? 'gpt-5-mini';
+
+/** Don't start a corrective attempt past this point (edge functions have a wall-clock limit). */
+const RETRY_BUDGET_MS = 70_000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,13 +30,27 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type TryOnCategory = 'tops' | 'bottoms';
+type Category = 'top' | 'bottom' | 'shoes' | 'jacket' | 'accessory';
 
 interface ClothingRow {
   id: string;
+  name: string | null;
   photo_url: string;
   photo_clean_url: string | null;
-  category: 'top' | 'bottom' | 'shoes' | 'jacket' | 'accessory' | null;
+  category: Category | null;
+  dominant_color: string | null;
+}
+
+interface Verdict {
+  garments: { index: number; ok: boolean; problem?: string }[];
+  person_ok: boolean;
+  person_problem?: string;
+}
+
+interface Attempt {
+  bytes: Uint8Array;
+  problems: string[];
+  verified: boolean;
 }
 
 function json(body: unknown, status = 200) {
@@ -29,62 +60,193 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function runSingleTryOn(modelImage: string, garment: ClothingRow, deadline: number) {
-  const category: TryOnCategory = garment.category === 'bottom' ? 'bottoms' : 'tops';
-  const garmentImage = garment.photo_clean_url ?? garment.photo_url;
-  const runResponse = await fetch(`${FASHN_BASE_URL}/run`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${FASHN_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model_name: 'tryon-v1.6',
-      inputs: {
-        model_image: modelImage,
-        garment_image: garmentImage,
-        category,
-        garment_photo_type: 'auto',
-        segmentation_free: true,
-        moderation_level: 'permissive',
-        mode: 'balanced',
-        num_samples: 1,
-        output_format: 'jpeg',
-      },
-    }),
-  });
+const CATEGORY_EN: Record<Category, string> = {
+  jacket: 'jacket / outer layer',
+  top: 'top',
+  bottom: 'trousers / skirt / shorts',
+  shoes: 'shoes',
+  accessory: 'accessory',
+};
+const ORDER: Category[] = ['jacket', 'top', 'bottom', 'shoes', 'accessory'];
 
-  const runData = await runResponse.json();
-  if (!runResponse.ok || !runData.id) {
-    throw new Error(runData.message ?? runData.error ?? 'tryon_provider_rejected');
+/** Rough colour word for the brief, so the model has a textual anchor too. */
+function colorWord(hex: string | null): string | null {
+  const m = hex ? /^#?([0-9a-f]{6})$/i.exec(hex.trim()) : null;
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = d === 0 ? 0 : max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h *= 60;
+  if (l < 0.15) return 'black';
+  if (l > 0.9 && s < 0.3) return 'white';
+  if (s < 0.13) return l > 0.66 ? 'light grey' : l > 0.34 ? 'grey' : 'charcoal';
+  if (h >= 20 && h < 50 && s < 0.5 && l > 0.62) return 'beige';
+  if (h >= 10 && h < 45 && l < 0.4) return 'brown';
+  if (h < 10 || h >= 345) return l < 0.32 ? 'burgundy' : 'red';
+  if (h < 45) return 'orange / camel';
+  if (h < 100 && s < 0.5 && l < 0.5) return 'khaki';
+  if (h < 65) return 'yellow';
+  if (h < 170) return 'green';
+  if (h < 255) return l < 0.3 ? 'navy' : 'blue';
+  if (h < 290) return 'purple';
+  return 'pink';
+}
+
+function describe(g: ClothingRow, index: number): string {
+  const parts = [CATEGORY_EN[g.category ?? 'accessory']];
+  if (g.name) parts.push(`"${g.name}"`);
+  const colour = colorWord(g.dominant_color);
+  if (colour) parts.push(`mainly ${colour}`);
+  return `- Image ${index}: ${parts.join(', ')}`;
+}
+
+function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
+  const hasShoes = garments.some((g) => g.category === 'shoes');
+  return [
+    'Virtual try-on. Image 1 is the person. The other images are reference photos of the exact garments to put on them:',
+    ...garments.map((g, i) => describe(g, i + 2)),
+    '',
+    'Dress the person from image 1 in exactly these garments and show a realistic full-body photo, head to feet, standing naturally, facing the camera, on a plain light studio background.',
+    'GARMENTS MUST BE COPIED EXACTLY from their reference images: same colour and shade, same fabric texture, same pattern or print, same logos and text, same buttons, zips, pockets, collar, sleeve length, trouser length and cut. Only adapt them to the body with natural folds and fit.',
+    'Do not add any garment, layer, accessory, jewellery or logo that is not listed. Do not recolour, simplify, restyle or "improve" any garment.',
+    hasShoes ? '' : 'Shoes are not provided: keep simple neutral shoes that do not draw attention.',
+    'THE PERSON MUST STAY THE SAME: same face and identity, same hairstyle and hair colour, same skin tone, same body shape and height. Do not beautify, slim or age them.',
+    fixes.length ? `A previous attempt had these problems, fix them precisely: ${fixes.join(' ; ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+async function download(url: string): Promise<Blob> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`image_fetch_failed ${res.status}`);
+  return new Blob([await res.arrayBuffer()], { type: res.headers.get('content-type') ?? 'image/jpeg' });
+}
+
+function extOf(type: string) {
+  return type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+}
+
+async function toDataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   }
+  return `data:${blob.type || 'image/jpeg'};base64,${btoa(binary)}`;
+}
 
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 2200));
-    const statusResponse = await fetch(`${FASHN_BASE_URL}/status/${runData.id}`, {
-      headers: { Authorization: `Bearer ${FASHN_API_KEY}` },
+async function renderOnce(person: Blob, garments: { row: ClothingRow; blob: Blob }[], fixes: string[]): Promise<Uint8Array> {
+  const build = (withFidelity: boolean) => {
+    const form = new FormData();
+    form.append('model', IMAGE_MODEL);
+    form.append('image[]', person, `person.${extOf(person.type)}`);
+    garments.forEach((g, i) => form.append('image[]', g.blob, `garment-${i + 2}.${extOf(g.blob.type)}`));
+    form.append('prompt', tryOnPrompt(garments.map((g) => g.row), fixes));
+    form.append('size', '1024x1536');
+    form.append('quality', QUALITY);
+    form.append('output_format', 'jpeg');
+    form.append('n', '1');
+    // Keeps faces and garment details closest to the inputs, where supported.
+    if (withFidelity) form.append('input_fidelity', 'high');
+    return form;
+  };
+  const call = (form: FormData) =>
+    fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: form,
     });
-    const statusData = await statusResponse.json();
-    if (!statusResponse.ok) {
-      throw new Error(statusData.message ?? 'tryon_status_failed');
-    }
-    if (statusData.status === 'completed') {
-      const output = statusData.output?.[0];
-      if (!output) throw new Error('tryon_empty_output');
-      return output as string;
-    }
-    if (statusData.status === 'failed') {
-      throw new Error(statusData.error?.message ?? statusData.error?.name ?? 'tryon_generation_failed');
-    }
-  }
 
-  throw new Error('tryon_timeout');
+  let res = await call(build(true));
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    const message: string = err?.error?.message ?? `openai error ${res.status}`;
+    // Some models don't take input_fidelity: retry once without it.
+    if (res.status === 400 && /input_fidelity/i.test(message)) res = await call(build(false));
+    else throw new Error(message);
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error?.message ?? `openai error ${res.status}`);
+  }
+  const data = await res.json();
+  const b64: string | undefined = data?.data?.[0]?.b64_json;
+  if (!b64) throw new Error('openai_empty_result');
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/** Vision check of the result against every reference. Null when the check itself failed. */
+async function judge(
+  personUrl: string,
+  garments: { row: ClothingRow; dataUrl: string }[],
+  result: Uint8Array
+): Promise<Verdict | null> {
+  try {
+    const resultUrl = await toDataUrl(new Blob([result], { type: 'image/jpeg' }));
+    const content: unknown[] = [
+      {
+        type: 'text',
+        text: [
+          'You are a strict quality checker for a virtual try-on.',
+          'Image 1 is the original person. Then come the garment references, numbered as listed. The LAST image is the generated try-on.',
+          ...garments.map((g, i) => describe(g.row, i + 2)),
+          'For each garment, say whether the generated image shows it faithfully. Flag real differences only: wrong colour or shade, missing or changed pattern/print/logo/text, different cut or length, missing or added details (buttons, pockets, collar), or garment absent. Ignore natural folds, fit, lighting and viewing angle.',
+          'Also check the person: same face/identity, hair, skin tone and body shape as image 1.',
+          'Answer ONLY with JSON: {"garments":[{"index":2,"ok":true,"problem":""}],"person_ok":true,"person_problem":""}. Problems must be short and concrete, in French.',
+        ].join('\n'),
+      },
+      { type: 'image_url', image_url: { url: personUrl } },
+      ...garments.map((g) => ({ type: 'image_url', image_url: { url: g.dataUrl } })),
+      { type: 'image_url', image_url: { url: resultUrl } },
+    ];
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: JUDGE_MODEL,
+        messages: [{ role: 'user', content }],
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!res.ok) {
+      console.error('judge failed', res.status, await res.text().catch(() => ''));
+      return null;
+    }
+    const data = await res.json();
+    const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? 'null');
+    if (!parsed || !Array.isArray(parsed.garments)) return null;
+    return parsed as Verdict;
+  } catch (e) {
+    console.error('judge error', e);
+    return null;
+  }
+}
+
+function problemsOf(verdict: Verdict, garments: ClothingRow[]): string[] {
+  const out: string[] = [];
+  for (const g of verdict.garments) {
+    if (g.ok) continue;
+    const row = garments[g.index - 2];
+    const label = row?.name ?? row?.category ?? `pièce ${g.index}`;
+    out.push(`${label} : ${g.problem || 'différent de la photo'}`);
+  }
+  if (!verdict.person_ok) out.push(`visage / silhouette : ${verdict.person_problem || 'modifié'}`);
+  return out;
 }
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  if (!FASHN_API_KEY) return json({ error: 'FASHN_API_KEY is not configured' }, 503);
+  if (!OPENAI_API_KEY) return json({ error: 'OPENAI_API_KEY is not configured' }, 503);
+  const started = Date.now();
 
   try {
     const authHeader = request.headers.get('Authorization');
@@ -112,42 +274,57 @@ Deno.serve(async (request) => {
     if (outfitError || !outfit) return json({ error: 'outfit_not_found' }, 404);
 
     const [{ data: profile, error: profileError }, { data: clothes, error: clothesError }] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('profile_photo_url, profile_photo_clean_url')
-        .eq('id', userId)
-        .single(),
+      supabase.from('profiles').select('profile_photo_url, profile_photo_clean_url').eq('id', userId).single(),
       supabase
         .from('clothes')
-        .select('id, photo_url, photo_clean_url, category')
+        .select('id, name, photo_url, photo_clean_url, category, dominant_color')
         .eq('user_id', userId)
         .in('id', outfit.clothes_ids),
     ]);
-
     if (profileError || !profile) return json({ error: 'profile_not_found' }, 404);
     if (clothesError) return json({ error: clothesError.message }, 500);
     const modelPhoto = profile.profile_photo_clean_url ?? profile.profile_photo_url;
     if (!modelPhoto) return json({ error: 'profile_photo_required' }, 400);
 
-    const order = { bottom: 0, top: 1, jacket: 2 } as const;
-    const compatible = ((clothes ?? []) as ClothingRow[])
-      .filter((item) => item.category === 'bottom' || item.category === 'top' || item.category === 'jacket')
-      .sort((a, b) => order[a.category as keyof typeof order] - order[b.category as keyof typeof order]);
-    if (compatible.length === 0) return json({ error: 'no_compatible_garments' }, 400);
+    const rows = ((clothes ?? []) as ClothingRow[])
+      .filter((c) => c.category && c.category !== 'accessory')
+      .sort((a, b) => ORDER.indexOf(a.category!) - ORDER.indexOf(b.category!))
+      .slice(0, 4);
+    if (rows.length === 0) return json({ error: 'no_compatible_garments' }, 400);
 
-    const deadline = Date.now() + 125_000;
-    let renderedImage = modelPhoto;
-    for (const garment of compatible.slice(0, 3)) {
-      renderedImage = await runSingleTryOn(renderedImage, garment, deadline);
+    // Clean cut-outs make the best references: the garment alone, no clutter.
+    const [person, ...garmentBlobs] = await Promise.all([
+      download(modelPhoto),
+      ...rows.map((r) => download(r.photo_clean_url ?? r.photo_url)),
+    ]);
+    const garments = rows.map((row, i) => ({ row, blob: garmentBlobs[i] }));
+    const personUrl = await toDataUrl(person);
+    const garmentUrls = await Promise.all(garments.map(async (g) => ({ row: g.row, dataUrl: await toDataUrl(g.blob) })));
+
+    const attempt = async (fixes: string[]): Promise<Attempt> => {
+      const bytes = await renderOnce(person, garments, fixes);
+      const verdict = await judge(personUrl, garmentUrls, bytes);
+      return verdict
+        ? { bytes, problems: problemsOf(verdict, rows), verified: true }
+        : { bytes, problems: [], verified: false };
+    };
+
+    let best = await attempt([]);
+    let attempts = 1;
+    if (best.problems.length > 0 && Date.now() - started < RETRY_BUDGET_MS) {
+      try {
+        const second = await attempt(best.problems);
+        attempts = 2;
+        if (second.problems.length < best.problems.length) best = second;
+      } catch (e) {
+        console.error('corrective attempt failed', e);
+      }
     }
 
-    const generatedResponse = await fetch(renderedImage);
-    if (!generatedResponse.ok) throw new Error('tryon_result_download_failed');
-    const resultBytes = await generatedResponse.arrayBuffer();
     const storagePath = `${userId}/${outfitId}-${crypto.randomUUID()}.jpg`;
     const { error: uploadError } = await supabase.storage
       .from('tryon')
-      .upload(storagePath, resultBytes, { contentType: 'image/jpeg', upsert: false });
+      .upload(storagePath, best.bytes, { contentType: 'image/jpeg', upsert: false });
     if (uploadError) throw uploadError;
 
     const { error: insertError } = await supabase.from('tryon_results').insert({
@@ -162,7 +339,13 @@ Deno.serve(async (request) => {
       .createSignedUrl(storagePath, 60 * 60);
     if (signedError) throw signedError;
 
-    return json({ url: signed.signedUrl });
+    return json({
+      url: signed.signedUrl,
+      verified: best.verified && best.problems.length === 0,
+      checked: best.verified,
+      warnings: best.problems,
+      attempts,
+    });
   } catch (cause) {
     console.error('generate-tryon failed', cause);
     return json({ error: cause instanceof Error ? cause.message : 'tryon_unknown_error' }, 500);

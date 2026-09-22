@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, View } fr
 import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
+import type { TryOnResponse } from '@/lib/tryon';
 
 export function TryOnSheet({
   visible,
@@ -16,18 +17,19 @@ export function TryOnSheet({
   modelPhoto: string | null;
   garmentCount: number;
   onClose: () => void;
-  onGenerate: () => Promise<string>;
+  onGenerate: () => Promise<TryOnResponse>;
 }) {
   const { colors, dark } = useTheme();
   const { t } = useLocale();
   const [loading, setLoading] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [result, setResult] = useState<TryOnResponse | null>(null);
+  const resultUrl = result?.url ?? null;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) {
       setLoading(false);
-      setResultUrl(null);
+      setResult(null);
       setError(null);
     }
   }, [visible]);
@@ -36,7 +38,7 @@ export function TryOnSheet({
     setLoading(true);
     setError(null);
     try {
-      setResultUrl(await onGenerate());
+      setResult(await onGenerate());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('tryon.error'));
     } finally {
@@ -83,10 +85,35 @@ export function TryOnSheet({
                   resizeMode="cover"
                   style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: radius.xl, backgroundColor: colors.surfaceAlt }}
                 />
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: colors.success }} />
-                  <Text style={[typography.bodyStrong, { color: colors.text }]}>{t('tryon.ready')}</Text>
-                </View>
+                <Verdict result={result} />
+                {error ? (
+                  <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft }}>
+                    <Text style={[typography.small, { color: colors.text }]}>{error}</Text>
+                  </View>
+                ) : null}
+                <Pressable
+                  onPress={generate}
+                  disabled={loading}
+                  style={({ pressed }) => ({
+                    minHeight: 48,
+                    borderRadius: radius.full,
+                    borderWidth: 1,
+                    borderColor: colors.borderStrong,
+                    backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: spacing.sm,
+                    opacity: loading ? 0.5 : 1,
+                  })}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color={colors.text} />
+                  ) : (
+                    <Ionicons name="refresh" size={17} color={colors.text} />
+                  )}
+                  <Text style={[typography.button, { color: colors.text }]}>{t('tryon.regenerate')}</Text>
+                </Pressable>
               </View>
             ) : (
               <>
@@ -159,5 +186,51 @@ export function TryOnSheet({
         </View>
       </View>
     </Modal>
+  );
+}
+
+/** What the automatic garment check concluded, shown as is. */
+function Verdict({ result }: { result: TryOnResponse | null }) {
+  const { colors } = useTheme();
+  const { t } = useLocale();
+  if (!result) return null;
+  const warnings = result.warnings ?? [];
+
+  if (warnings.length > 0) {
+    return (
+      <View
+        style={{
+          gap: 6,
+          padding: spacing.md,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.danger,
+          backgroundColor: colors.surface,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Ionicons name="alert-circle-outline" size={19} color={colors.danger} />
+          <Text style={[typography.bodyStrong, { color: colors.text }]}>{t('tryon.warningsTitle')}</Text>
+        </View>
+        {warnings.map((w) => (
+          <Text key={w} style={[typography.small, { color: colors.text }]}>
+            {`· ${w}`}
+          </Text>
+        ))}
+        <Text style={[typography.caption, { color: colors.textMuted }]}>{t('tryon.warningsHint')}</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+      <Ionicons
+        name={result.verified ? 'shield-checkmark' : 'information-circle-outline'}
+        size={19}
+        color={result.verified ? colors.success : colors.textMuted}
+      />
+      <Text style={[typography.bodyStrong, { color: result.verified ? colors.text : colors.textMuted, flex: 1 }]}>
+        {result.verified ? t('tryon.verified') : t('tryon.unchecked')}
+      </Text>
+    </View>
   );
 }
