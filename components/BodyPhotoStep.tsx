@@ -18,6 +18,7 @@ const TIPS: { icon: keyof typeof Ionicons.glyphMap; key: string }[] = [
   { icon: 'body-outline', key: 'body.tip1' },
   { icon: 'hand-left-outline', key: 'body.tip2' },
   { icon: 'shirt-outline', key: 'body.tip3' },
+  { icon: 'watch-outline', key: 'body.tip5' },
   { icon: 'phone-portrait-outline', key: 'body.tip4' },
 ];
 

@@ -122,6 +122,7 @@ function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
     'Dress the person from image 1 in exactly these garments and show a realistic full-body photo, head to feet, standing naturally, facing the camera, on a plain light studio background.',
     'GARMENTS MUST BE COPIED EXACTLY from their reference images: same colour and shade, same fabric texture, same pattern or print, same logos and text, same buttons, zips, pockets, collar, sleeve length, trouser length and cut. Only adapt them to the body with natural folds and fit.',
     'Do not add any garment, layer, accessory, jewellery or logo that is not listed. Do not recolour, simplify, restyle or "improve" any garment.',
+    'Keep everything the person already wears in image 1 that is not replaced: watch, jewellery, rings, piercings, glasses, hair accessories — same items, same wrist or side.',
     hasShoes ? '' : 'Shoes are not provided: keep simple neutral shoes that do not draw attention.',
     garments.some((g) => g.category === 'accessory')
       ? 'The accessory is worn on the head or face (cap, hat, beanie, glasses): place it naturally, the right way round and at the right size, without hiding the face.'
