@@ -10,13 +10,14 @@ import { useTheme } from '@/context/ThemeContext';
 
 /**
  * Floating badge while the studio queue works: the companion, busy retouching
- * the pieces that were just added. It shows up on its own and leaves on its own.
+ * the pieces that were just added. Top left, clear of the "add" button, compact
+ * enough to sit over a screen title without hiding it.
  */
 export function StudioBadge() {
   const { colors } = useTheme();
   const { t } = useLocale();
   const { kind } = useCompanion();
-  const { pending, current } = useStudioQueue();
+  const { pending } = useStudioQueue();
   const insets = useSafeAreaInsets();
   const enter = useRef(new Animated.Value(0)).current;
   const dots = useRef(new Animated.Value(0)).current;
@@ -47,7 +48,7 @@ export function StudioBadge() {
       pointerEvents="none"
       style={{
         position: 'absolute',
-        right: spacing.md,
+        left: spacing.md,
         top: insets.top + spacing.sm,
         opacity: enter,
         transform: [
@@ -61,9 +62,9 @@ export function StudioBadge() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
-          paddingLeft: 4,
-          paddingRight: 14,
-          paddingVertical: 4,
+          paddingLeft: 3,
+          paddingRight: 12,
+          paddingVertical: 3,
           borderRadius: radius.full,
           backgroundColor: colors.surface,
           borderWidth: 1,
@@ -75,16 +76,11 @@ export function StudioBadge() {
           elevation: 6,
         }}
       >
-        {kind ? <CompanionAvatar kind={kind} size={42} mood="thinking" /> : null}
-        <View>
-          <Text style={[typography.caption, { color: colors.text, fontSize: 11 }]}>
-            {t('studio.badge')}
-            <Dots value={dots} />
-          </Text>
-          <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, fontSize: 10, maxWidth: 140 }]}>
-            {pending > 1 ? t('studio.badgeQueue', { count: pending }) : current ?? t('category.accessory')}
-          </Text>
-        </View>
+        {kind ? <CompanionAvatar kind={kind} size={34} mood="thinking" /> : null}
+        <Text numberOfLines={1} style={[typography.caption, { color: colors.text, fontSize: 11, maxWidth: 150 }]}>
+          {pending > 1 ? t('studio.badgeQueue', { count: pending }) : t('studio.badge')}
+          <Dots value={dots} />
+        </Text>
       </View>
     </Animated.View>
   );
