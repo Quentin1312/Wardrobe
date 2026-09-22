@@ -101,9 +101,11 @@ Deno.serve(async (req) => {
       return json({ error: 'not_enough_items', outfits: [] }, 200);
     }
 
-    const weatherLine = weather
-      ? `${weather.temp}°C, ${weather.condition}`
-      : 'inconnue';
+    const range =
+      weather && typeof weather.min === 'number' && typeof weather.max === 'number' && weather.max - weather.min >= 2
+        ? ` (de ${weather.min}°C à ${weather.max}°C sur la journée)`
+        : '';
+    const weatherLine = weather ? `${weather.temp}°C, ${weather.condition}${range}` : 'inconnue';
 
     const weekDays = Array.isArray(days)
       ? days
@@ -201,8 +203,13 @@ ${assignment}
 Chaque tenue DOIT contenir exactement un haut (top), un bas (bottom) et une paire
 de chaussures (shoes). Ajoute au maximum une couche intermédiaire (mid : pull,
 sweat), une veste (jacket) et un accessoire (accessory), uniquement s'ils ont un
-intérêt pour la météo ou le style. En dessous de 12°C, superpose : haut + pull,
-et une veste si le temps l'exige. Une
+intérêt pour la météo ou le style.
+Règle des couches, à suivre strictement d'après la température la plus HAUTE de
+la journée : 22°C et plus, ni pull ni veste ; 18 à 21°C, pas de pull, veste
+légère seulement le soir ou sous la pluie ; 12 à 17°C, un pull OU une veste,
+rarement les deux ; en dessous de 12°C, haut + pull, et une veste en dessous de
+8°C, sous la pluie ou par grand vent. Si l'écart entre le matin et l'après-midi
+dépasse 6°C, choisis une couche qui s'enlève facilement. Une
 casquette, montre, sac ou ceinture peut compléter le look, sans être obligatoire.
 N'utilise QUE les id fournis ci-dessus, jamais deux fois le même id.
 La fiche détaillée prime sur la couleur automatique : « couleurs:jaune + anthracite »

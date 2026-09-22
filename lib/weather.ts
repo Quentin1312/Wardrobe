@@ -14,6 +14,9 @@ export interface Weather {
 export interface DailyForecast {
   date: string;
   temp: number;
+  /** Coldest and warmest readings of that day. */
+  min: number;
+  max: number;
   condition: string;
   main: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -92,17 +95,26 @@ export async function fetchForecast(
   const data = await res.json();
   const offsetSeconds = Number(data.city?.timezone ?? 0);
   const best = new Map<string, { distance: number; forecast: DailyForecast }>();
+  const range = new Map<string, { min: number; max: number }>();
 
   for (const reading of data.list ?? []) {
     const local = new Date((Number(reading.dt) + offsetSeconds) * 1000);
     const date = local.toISOString().slice(0, 10);
     const hour = local.getUTCHours();
     const main = reading.weather?.[0]?.main ?? 'Clouds';
+    const temp = Math.round(reading.main?.temp ?? 0);
+    const seen = range.get(date);
+    range.set(date, {
+      min: Math.min(seen?.min ?? temp, temp),
+      max: Math.max(seen?.max ?? temp, temp),
+    });
     const candidate = {
       distance: Math.abs(hour - 12),
       forecast: {
         date,
-        temp: Math.round(reading.main?.temp ?? 0),
+        temp,
+        min: temp,
+        max: temp,
         condition: reading.weather?.[0]?.description ?? '',
         main,
         icon: iconFor(main),
@@ -111,7 +123,9 @@ export async function fetchForecast(
     if (!best.has(date) || candidate.distance < best.get(date)!.distance) best.set(date, candidate);
   }
 
-  return [...best.values()].map((entry) => entry.forecast).slice(0, 5);
+  return [...best.values()]
+    .map((entry) => ({ ...entry.forecast, ...(range.get(entry.forecast.date) ?? {}) }))
+    .slice(0, 5);
 }
 
 /** Short human summary used later as outfit-suggestion context. */

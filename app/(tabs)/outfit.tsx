@@ -56,6 +56,8 @@ export default function OutfitDay() {
   const router = useRouter();
   const { state } = useWeather();
   const weather = state.status === 'ready' ? state.weather : null;
+  const todayForecast =
+    state.status === 'ready' ? state.forecast.find((day) => day.date === dateKey(new Date())) ?? null : null;
 
   const [buckets, setBuckets] = useState<Buckets>(emptyBuckets());
   const [loading, setLoading] = useState(true);
@@ -256,7 +258,15 @@ export default function OutfitDay() {
     setStyleMsg(null);
     setStyling(true);
     try {
-      const w = weather ? { temp: weather.temp, condition: weather.condition } : null;
+      const w = weather
+        ? {
+            temp: weather.temp,
+            condition: weather.condition,
+            // The day's range: a cold morning shouldn't mean a coat all afternoon.
+            min: todayForecast ? Math.min(todayForecast.min, weather.temp) : weather.temp,
+            max: todayForecast ? Math.max(todayForecast.max, weather.temp) : weather.temp,
+          }
+        : null;
       const { outfits, error } = await generateOutfits(w, occasion);
       if (error === 'not_enough_items') {
         setStyleMsg(t('today.tooFewBody'));
