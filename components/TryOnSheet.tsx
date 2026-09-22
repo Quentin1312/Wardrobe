@@ -1,22 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { FittingAnimation } from '@/components/FittingAnimation';
 import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { TryOnResponse } from '@/lib/tryon';
+import type { Clothing } from '@/lib/types';
 
+/**
+ * AI try-on. Tapping "Try it on" is the go-ahead: the render starts as soon as
+ * the sheet opens, with an animated fitting while it cooks.
+ */
 export function TryOnSheet({
   visible,
   modelPhoto,
-  garmentCount,
+  items,
   onClose,
   onGenerate,
   onAddPhoto,
 }: {
   visible: boolean;
   modelPhoto: string | null;
-  garmentCount: number;
+  /** Pieces that will be tried on (shown in the animation). */
+  items: Clothing[];
   onClose: () => void;
   onGenerate: () => Promise<TryOnResponse>;
   /** Opens the try-on photo screen when the user has none yet. */
@@ -26,22 +33,20 @@ export function TryOnSheet({
   const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TryOnResponse | null>(null);
-  const resultUrl = result?.url ?? null;
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!visible) {
-      setLoading(false);
-      setResult(null);
-      setError(null);
-    }
-  }, [visible]);
+  const reveal = useRef(new Animated.Value(0)).current;
+  const started = useRef(false);
+  const resultUrl = result?.url ?? null;
+  const ready = Boolean(modelPhoto) && items.length > 0;
 
   async function generate() {
     setLoading(true);
     setError(null);
+    setResult(null);
+    reveal.setValue(0);
     try {
       setResult(await onGenerate());
+      Animated.spring(reveal, { toValue: 1, friction: 7, tension: 50, useNativeDriver: true }).start();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('tryon.error'));
     } finally {
@@ -49,12 +54,27 @@ export function TryOnSheet({
     }
   }
 
+  useEffect(() => {
+    if (!visible) {
+      started.current = false;
+      setLoading(false);
+      setResult(null);
+      setError(null);
+      return;
+    }
+    if (ready && !started.current) {
+      started.current = true;
+      generate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, ready]);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay }}>
         <View
           style={{
-            maxHeight: '92%',
+            maxHeight: '94%',
             borderTopLeftRadius: radius.xl,
             borderTopRightRadius: radius.xl,
             backgroundColor: colors.bg,
@@ -65,12 +85,11 @@ export function TryOnSheet({
           <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ width: 42, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong }} />
           </View>
-          <ScrollView contentContainerStyle={{ gap: spacing.lg }} showsVerticalScrollIndicator={false}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={[typography.eyebrow, { color: colors.accent }]}>WARDROBE AI</Text>
-                <Text style={[typography.h2, { color: colors.text }]}>{t('tryon.title')}</Text>
-              </View>
+          <ScrollView contentContainerStyle={{ gap: spacing.lg, width: '100%', maxWidth: 520, alignSelf: 'center' }} showsVerticalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[typography.h2, { color: colors.text, flex: 1 }]}>
+                {loading ? t('tryon.generating') : t('tryon.title')}
+              </Text>
               <Pressable
                 accessibilityLabel={t('common.close')}
                 onPress={onClose}
@@ -81,22 +100,52 @@ export function TryOnSheet({
               </Pressable>
             </View>
 
-            {resultUrl ? (
-              <View style={{ gap: spacing.md }}>
-                <Image
-                  source={{ uri: resultUrl }}
-                  resizeMode="cover"
-                  style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: radius.xl, backgroundColor: colors.surfaceAlt }}
-                />
-                <Verdict result={result} />
-                {error ? (
-                  <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft }}>
-                    <Text style={[typography.small, { color: colors.text }]}>{error}</Text>
-                  </View>
+            {!ready ? (
+              <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
+                <Ionicons name="body-outline" size={56} color={colors.textMuted} />
+                <Text style={[typography.body, { color: colors.text, textAlign: 'center' }]}>
+                  {modelPhoto ? t('tryon.noPieces') : t('tryon.needPhoto')}
+                </Text>
+                {!modelPhoto && onAddPhoto ? (
+                  <Pressable
+                    onPress={onAddPhoto}
+                    style={({ pressed }) => ({
+                      minHeight: 52,
+                      paddingHorizontal: spacing.lg,
+                      borderRadius: radius.full,
+                      backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                    })}
+                  >
+                    <Ionicons name="camera-outline" size={18} color={colors.primaryText} />
+                    <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.addPhoto')}</Text>
+                  </Pressable>
                 ) : null}
+              </View>
+            ) : loading ? (
+              <FittingAnimation items={items} />
+            ) : resultUrl ? (
+              <View style={{ gap: spacing.md }}>
+                <Animated.View
+                  style={{
+                    opacity: reveal,
+                    transform: [
+                      { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
+                      { translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) },
+                    ],
+                  }}
+                >
+                  <Image
+                    source={{ uri: resultUrl }}
+                    resizeMode="cover"
+                    style={{ width: '100%', aspectRatio: 2 / 3, borderRadius: radius.xl, backgroundColor: colors.surfaceAlt }}
+                  />
+                </Animated.View>
+                <Verdict result={result} />
                 <Pressable
                   onPress={generate}
-                  disabled={loading}
                   style={({ pressed }) => ({
                     minHeight: 48,
                     borderRadius: radius.full,
@@ -107,91 +156,36 @@ export function TryOnSheet({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: spacing.sm,
-                    opacity: loading ? 0.5 : 1,
                   })}
                 >
-                  {loading ? (
-                    <ActivityIndicator size="small" color={colors.text} />
-                  ) : (
-                    <Ionicons name="refresh" size={17} color={colors.text} />
-                  )}
+                  <Ionicons name="refresh" size={17} color={colors.text} />
                   <Text style={[typography.button, { color: colors.text }]}>{t('tryon.regenerate')}</Text>
                 </Pressable>
               </View>
-            ) : (
-              <>
-                <View
-                  style={{
-                    minHeight: 260,
-                    borderRadius: radius.xl,
-                    overflow: 'hidden',
-                    backgroundColor: colors.hero,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {modelPhoto ? (
-                    <Image source={{ uri: modelPhoto }} resizeMode="cover" style={{ width: '100%', height: 300, opacity: loading ? 0.34 : 0.72 }} />
-                  ) : (
-                    <Ionicons name="person-outline" size={82} color={colors.heroMuted} />
-                  )}
-                  {loading ? (
-                    <View style={{ position: 'absolute', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg }}>
-                      <ActivityIndicator size="large" color={colors.energy} />
-                      <Text style={[typography.bodyStrong, { color: colors.heroText, textAlign: 'center' }]}>
-                        {t('tryon.generating')}
-                      </Text>
-                      <Text style={[typography.small, { color: colors.heroMuted, textAlign: 'center' }]}>
-                        {t('tryon.generatingHint')}
-                      </Text>
-                    </View>
-                  ) : null}
+            ) : error ? (
+              <View style={{ gap: spacing.md }}>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.surface }}>
+                  <Ionicons name="alert-circle-outline" size={19} color={colors.danger} />
+                  <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{error}</Text>
                 </View>
-
-                <View style={{ gap: spacing.sm }}>
-                  <Text style={[typography.bodyStrong, { color: colors.text }]}>
-                    {t('tryon.pieces', { count: garmentCount })}
-                  </Text>
-                  <Text style={[typography.small, { color: colors.textMuted }]}>{t('tryon.privacy')}</Text>
-                </View>
-
-                {error ? (
-                  <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft }}>
-                    <Text style={[typography.small, { color: colors.text }]}>{error}</Text>
-                  </View>
-                ) : null}
-
                 <Pressable
                   onPress={generate}
-                  disabled={loading || !modelPhoto || garmentCount === 0}
                   style={({ pressed }) => ({
-                    minHeight: 56,
+                    minHeight: 52,
                     borderRadius: radius.full,
                     backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-                    opacity: loading || !modelPhoto || garmentCount === 0 ? 0.4 : 1,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: spacing.sm,
                   })}
                 >
-                  <Ionicons name="body-outline" size={19} color={colors.energy} />
-                  <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.consent')}</Text>
+                  <Ionicons name="refresh" size={18} color={colors.primaryText} />
+                  <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.regenerate')}</Text>
                 </Pressable>
-                {!modelPhoto ? (
-                  <View style={{ alignItems: 'center', gap: spacing.sm }}>
-                    <Text style={[typography.caption, { color: colors.danger, textAlign: 'center' }]}>
-                      {t('tryon.needPhoto')}
-                    </Text>
-                    {onAddPhoto ? (
-                      <Pressable onPress={onAddPhoto} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="camera-outline" size={17} color={colors.accent} />
-                        <Text style={[typography.bodyStrong, { color: colors.accent }]}>{t('tryon.addPhoto')}</Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ) : null}
-              </>
+              </View>
+            ) : (
+              <ActivityIndicator color={colors.accent} />
             )}
           </ScrollView>
         </View>

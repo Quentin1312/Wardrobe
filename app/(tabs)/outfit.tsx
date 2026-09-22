@@ -262,7 +262,9 @@ export default function OutfitDay() {
     jacket: buckets.jacket.length,
     accessory: buckets.accessory.length,
   };
-  const tryOnCount = TRYON_CATEGORIES.filter((category) => current(category)).length;
+  const tryOnItems = TRYON_CATEGORIES.map((category) => current(category)).filter(
+    (piece): piece is Clothing => Boolean(piece)
+  );
   const profilePhoto = profile?.profile_photo_clean_url ?? profile?.profile_photo_url ?? null;
 
   return (
@@ -480,7 +482,7 @@ export default function OutfitDay() {
       <TryOnSheet
         visible={tryOnOpen}
         modelPhoto={profilePhoto}
-        garmentCount={tryOnCount}
+        items={tryOnItems}
         onClose={() => setTryOnOpen(false)}
         onGenerate={runTryOn}
         onAddPhoto={() => {
