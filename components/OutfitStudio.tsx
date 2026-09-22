@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import Svg, { Path } from 'react-native-svg';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, ScrollView, Text, View, type LayoutChangeEvent } from 'react-native';
 import { categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
@@ -12,6 +13,9 @@ import type { Clothing, ClothingCategory } from '@/lib/types';
 interface OutfitStudioProps {
   current: (category: ClothingCategory) => Clothing | null;
   counts: Record<ClothingCategory, number>;
+  /** Accessories to choose from, shown as a row under the look. */
+  accessories?: Clothing[];
+  onSelectAccessory?: (item: Clothing | null) => void;
   onPrevious: (category: ClothingCategory) => void;
   onNext: (category: ClothingCategory) => void;
   /** Today's look is settled: show it, but don't let it be changed. */
@@ -26,12 +30,14 @@ interface OutfitStudioProps {
 const WIDTH = {
   top: 0.56,
   jacket: 0.58,
-  layerBack: 0.5,
-  layerFrontJacket: 0.52,
-  layerFrontTop: 0.46,
+  layerBack: 0.44,
+  layerFrontJacket: 0.54,
+  layerFrontTop: 0.5,
   bottom: 0.4,
   shoes: 0.44,
 };
+/** How far the back layer peeks out on the left, as a share of the card width. */
+const LAYER_SHIFT = 0.17;
 
 const UPPER_H = 262;
 /** Room kept free under the upper row's label and layer switch. */
@@ -39,7 +45,15 @@ const UPPER_INSET = 48;
 const BOTTOM_H = 262;
 const SHOES_H = 112;
 
-export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: OutfitStudioProps) {
+export function OutfitStudio({
+  current,
+  counts,
+  accessories = [],
+  onSelectAccessory,
+  onPrevious,
+  onNext,
+  locked,
+}: OutfitStudioProps) {
   const { colors } = useTheme();
   const top = current('top');
   const jacket = current('jacket');
@@ -54,10 +68,6 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
   const showBottom = locked ? Boolean(current('bottom')) : counts.bottom > 0;
   const showShoes = locked ? Boolean(current('shoes')) : counts.shoes > 0;
   const showAccessory = locked ? Boolean(accessory) : counts.accessory > 0;
-
-  const sticker = showAccessory ? (
-    <AccessorySticker item={accessory} locked={locked} onPress={() => onNext('accessory')} />
-  ) : null;
 
   return (
     <View
@@ -79,7 +89,6 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
         onSetActive={setActive}
         onPrevious={() => onPrevious(active)}
         onNext={() => onNext(active)}
-        overlay={showBottom ? null : sticker}
       />
 
       {showBottom ? (
@@ -91,7 +100,6 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
           locked={locked}
           onPrevious={() => onPrevious('bottom')}
           onNext={() => onNext('bottom')}
-          overlay={sticker}
         >
           {(frame) => <FittedGarment item={current('bottom')} frame={frame} widthRatio={WIDTH.bottom} align="top" />}
         </Row>
@@ -111,6 +119,77 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
           {(frame) => <FittedGarment item={current('shoes')} frame={frame} widthRatio={WIDTH.shoes} />}
         </Row>
       ) : null}
+
+      {showAccessory ? (
+        <AccessoryPicker
+          items={accessories}
+          selected={accessory}
+          locked={locked}
+          onSelect={onSelectAccessory ?? (() => onNext('accessory'))}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/** Accessories as a row of thumbnails: tap one to wear it, tap it again to drop it. */
+function AccessoryPicker({
+  items,
+  selected,
+  locked,
+  onSelect,
+}: {
+  items: Clothing[];
+  selected: Clothing | null;
+  locked?: boolean;
+  onSelect: (item: Clothing | null) => void;
+}) {
+  const { colors } = useTheme();
+  const { t } = useLocale();
+  const list = items.length > 0 ? items : selected ? [selected] : [];
+  if (list.length === 0) return null;
+
+  return (
+    <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: 10, gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{t('category.accessory')}</Text>
+        <Text numberOfLines={1} style={[typography.caption, { color: colors.text, flex: 1 }]}>
+          {selected?.name ?? t('outfitDay.none')}
+        </Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: spacing.md }}>
+        {list.map((item) => {
+          const on = selected?.id === item.id;
+          return (
+            <Pressable
+              key={item.id}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={item.name ?? t('category.accessory')}
+              onPress={() => onSelect(on ? null : item)}
+              style={({ pressed }) => ({
+                width: 54,
+                height: 54,
+                borderRadius: radius.md,
+                padding: 5,
+                backgroundColor: on ? '#EFEEE9' : colors.surfaceAlt,
+                borderWidth: on ? 2 : 1,
+                borderColor: on ? colors.accent : colors.border,
+                opacity: pressed ? 0.75 : 1,
+              })}
+            >
+              <Image
+                source={{ uri: item.photo_clean_url ?? item.photo_url }}
+                style={{ width: '100%', height: '100%', opacity: on ? 1 : 0.55 }}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                recyclingKey={item.id}
+              />
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -206,7 +285,7 @@ function UpperRow({
             item={back}
             frame={frame}
             widthRatio={WIDTH.layerBack}
-            offsetX={-frame.w * 0.14}
+            offsetX={-frame.w * LAYER_SHIFT}
             insetTop={UPPER_INSET}
             dim
             onPress={locked ? undefined : () => onSetActive(backLayer)}
@@ -215,7 +294,6 @@ function UpperRow({
             item={front}
             frame={frame}
             widthRatio={active === 'jacket' ? WIDTH.layerFrontJacket : WIDTH.layerFrontTop}
-            offsetX={frame.w * 0.12}
             insetTop={UPPER_INSET}
           />
         </>
@@ -303,7 +381,11 @@ function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange:
           backgroundColor: on ? colors.text : 'transparent',
         }}
       >
-        <Ionicons name={icon} size={13} color={on ? colors.bg : colors.textMuted} />
+        {layer === 'jacket' ? (
+          <JacketGlyph color={on ? colors.bg : colors.textMuted} />
+        ) : (
+          <Ionicons name={icon} size={13} color={on ? colors.bg : colors.textMuted} />
+        )}
         <Text style={[typography.caption, { color: on ? colors.bg : colors.textMuted, fontSize: 11 }]}>
           {t(categoryKey(layer))}
         </Text>
@@ -326,62 +408,24 @@ function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange:
       }}
     >
       {tab('top', 'shirt-outline')}
-      {tab('jacket', 'layers-outline')}
+      {tab('jacket', 'shirt-outline')}
     </View>
   );
 }
 
-/** Small corner tile: tap to go through the accessories (and "none"). */
-function AccessorySticker({ item, locked, onPress }: { item: Clothing | null; locked?: boolean; onPress: () => void }) {
-  const { colors } = useTheme();
-  const { t } = useLocale();
-  if (locked && !item) return null;
+/** Ionicons has no jacket: a small open-jacket glyph drawn by hand. */
+function JacketGlyph({ color }: { color: string }) {
   return (
-    <Pressable
-      onPress={locked ? undefined : onPress}
-      disabled={locked}
-      accessibilityRole="button"
-      accessibilityLabel={item?.name ?? t('category.accessory')}
-      style={({ pressed }) => ({
-        position: 'absolute',
-        right: spacing.sm,
-        bottom: spacing.sm,
-        width: 70,
-        alignItems: 'center',
-        gap: 3,
-        opacity: pressed ? 0.8 : 1,
-      })}
-    >
-      <View
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: radius.lg,
-          backgroundColor: item ? '#EFEEE9' : 'transparent',
-          borderWidth: item ? 0 : 1.5,
-          borderStyle: item ? 'solid' : 'dashed',
-          borderColor: colors.borderStrong,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 6,
-        }}
-      >
-        {item ? (
-          <Image
-            source={{ uri: item.photo_clean_url ?? item.photo_url }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            recyclingKey={item.id}
-          />
-        ) : (
-          <Ionicons name="add" size={24} color={colors.textMuted} />
-        )}
-      </View>
-      <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, fontSize: 10, maxWidth: 70 }]}>
-        {item?.name ?? t('category.accessory')}
-      </Text>
-    </Pressable>
+    <Svg width={14} height={14} viewBox="0 0 24 24">
+      <Path
+        d="M9 3 L12 6 L15 3 L20 5.5 L21.5 12 L18.5 12.8 L19 21 L5 21 L5.5 12.8 L2.5 12 L4 5.5 Z"
+        fill="none"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinejoin="round"
+      />
+      <Path d="M12 6 L12 21 M9 3 L12 9 L15 3" fill="none" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+    </Svg>
   );
 }
 

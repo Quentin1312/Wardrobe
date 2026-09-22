@@ -316,7 +316,15 @@ export default function OutfitDay() {
             current={current}
             counts={counts}
             locked={!!locked}
-            onPrevious={(category) => cycle(category, -1)}
+            accessories={buckets.accessory}
+          onSelectAccessory={(item) => {
+            resetSavedState();
+            setIdx((previous) => ({
+              ...previous,
+              accessory: item ? buckets.accessory.findIndex((piece) => piece.id === item.id) : -1,
+            }));
+          }}
+          onPrevious={(category) => cycle(category, -1)}
             onNext={(category) => cycle(category, 1)}
           />
 
