@@ -68,6 +68,7 @@ export function OutfitConfirmed({
 
   const ringScale = ring.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.9] });
   const ringOpacity = ring.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.35, 0] });
+  const cardSize = items.length >= 5 ? 54 : items.length === 4 ? 68 : 86;
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
@@ -139,7 +140,7 @@ export function OutfitConfirmed({
           )}
 
           {/* The look */}
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
             {items.map((item, i) => {
               const driver = cards[i];
               if (!driver) return null;
@@ -148,8 +149,8 @@ export function OutfitConfirmed({
                 <Animated.View
                   key={item.id}
                   style={{
-                    width: 86,
-                    height: 86,
+                    width: cardSize,
+                    height: cardSize,
                     borderRadius: radius.md,
                     backgroundColor: '#EFEEE9',
                     padding: 6,

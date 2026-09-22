@@ -62,6 +62,9 @@ const en: Dict = {
   'outfitDay.needMoreBody': 'Add at least a top, a bottom and shoes to build outfits.',
   'outfitDay.none': 'None',
   'outfitDay.jacketOptional': 'Jacket (optional)',
+  'outfitDay.finalTouch': 'Final touch',
+  'outfitDay.hideLayer': 'Hide {layer}',
+  'outfitDay.showLayer': 'Show {layer}',
 
   'tryon.cta': 'Try it on with AI',
   'tryon.title': 'See it on you',
@@ -319,6 +322,9 @@ const fr: Dict = {
   'outfitDay.needMoreBody': 'Ajoute au moins un haut, un bas et des chaussures pour composer des tenues.',
   'outfitDay.none': 'Aucune',
   'outfitDay.jacketOptional': 'Veste (optionnel)',
+  'outfitDay.finalTouch': 'Touche finale',
+  'outfitDay.hideLayer': 'Masquer {layer}',
+  'outfitDay.showLayer': 'Afficher {layer}',
 
   'tryon.cta': 'Essayer sur moi avec l’IA',
   'tryon.title': 'Vois la tenue sur toi',

@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { categoryKey } from '@/constants/categories';
+import { OutfitStudio } from '@/components/OutfitStudio';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { SuggestedOutfit } from '@/lib/outfits';
-import type { Clothing } from '@/lib/types';
+import type { Clothing, ClothingCategory } from '@/lib/types';
 import type { WeekDay } from '@/lib/week';
 
 export function WeeklyPlanner({
@@ -34,12 +33,18 @@ export function WeeklyPlanner({
   const { t } = useLocale();
   const selectedDay = days.find((day) => day.date === selectedDate) ?? days[0];
   const selectedOutfit = outfits.find((outfit) => outfit.planned_for === selectedDay?.date);
-  // Same look as the studio: top, bottom, shoes, in that order (no jackets).
-  const WORN_ORDER = ['top', 'bottom', 'shoes'];
   const items = (selectedOutfit?.clothes_ids ?? [])
     .map((id) => clothes.get(id))
-    .filter((item): item is Clothing => Boolean(item) && WORN_ORDER.includes(item!.category ?? ''))
-    .sort((a, b) => WORN_ORDER.indexOf(a.category ?? '') - WORN_ORDER.indexOf(b.category ?? ''));
+    .filter((item): item is Clothing => Boolean(item));
+  const itemFor = (category: ClothingCategory) =>
+    items.find((item) => item.category === category) ?? null;
+  const counts: Record<ClothingCategory, number> = {
+    top: itemFor('top') ? 1 : 0,
+    jacket: itemFor('jacket') ? 1 : 0,
+    bottom: itemFor('bottom') ? 1 : 0,
+    shoes: itemFor('shoes') ? 1 : 0,
+    accessory: itemFor('accessory') ? 1 : 0,
+  };
   const hasPlan = outfits.length > 0;
 
   return (
@@ -149,35 +154,13 @@ export function WeeklyPlanner({
             ) : null}
           </View>
 
-          {items.map((item) => (
-            <View
-              key={item.id}
-              style={{
-                height: item.category === 'shoes' ? 118 : item.category === 'bottom' ? 228 : 200,
-                backgroundColor: colors.surface,
-                paddingHorizontal: spacing.lg,
-                paddingVertical: 2,
-              }}
-            >
-              <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: '45%', zIndex: 1 }} pointerEvents="none">
-                <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{t(categoryKey(item.category))}</Text>
-                {item.name ? (
-                  <Text numberOfLines={2} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
-                    {item.name}
-                  </Text>
-                ) : null}
-              </View>
-              <Image
-                source={{ uri: item.photo_clean_url ?? item.photo_url }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="contain"
-                cachePolicy="memory-disk"
-                transition={180}
-                recyclingKey={item.id}
-                priority="high"
-              />
-            </View>
-          ))}
+          <OutfitStudio
+            current={itemFor}
+            counts={counts}
+            locked
+            onPrevious={() => {}}
+            onNext={() => {}}
+          />
 
           {selectedOutfit.rationale ? (
             <Text style={[typography.small, { color: colors.textMuted, padding: spacing.md, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }]}>

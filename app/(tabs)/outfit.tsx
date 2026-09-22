@@ -22,6 +22,8 @@ import { weatherContext } from '@/lib/weather';
 import { dateKey } from '@/lib/week';
 
 const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
+const OUTFIT_ORDER: ClothingCategory[] = ['top', 'jacket', 'bottom', 'shoes', 'accessory'];
+const OPTIONAL: ClothingCategory[] = ['jacket', 'accessory'];
 const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket', 'shoes'];
 
 type Buckets = Record<ClothingCategory, Clothing[]>;
@@ -33,14 +35,14 @@ function emptyBuckets(): Buckets {
 
 function indicesForIds(buckets: Buckets, ids: string[]): Indices {
   const indices = { ...INITIAL_INDICES };
-  for (const category of REQUIRED) {
+  for (const category of OUTFIT_ORDER) {
     const position = buckets[category].findIndex((piece) => ids.includes(piece.id));
-    if (position >= 0) indices[category] = position;
+    indices[category] = position >= 0 ? position : OPTIONAL.includes(category) ? -1 : 0;
   }
   return indices;
 }
 
-const INITIAL_INDICES: Indices = { top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: 0 };
+const INITIAL_INDICES: Indices = { top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: -1 };
 
 export default function OutfitDay() {
   const { colors, dark } = useTheme();
@@ -105,16 +107,14 @@ export default function OutfitDay() {
 
   const current = useCallback((category: ClothingCategory): Clothing | null => {
     if (locked) return locked.find((piece) => piece.category === category) ?? null;
-    if (category === 'jacket' && idx.jacket < 0) return null;
+    if (OPTIONAL.includes(category) && idx[category] < 0) return null;
     return buckets[category][idx[category]] ?? null;
   }, [buckets, idx, locked]);
 
-  // Jackets are excluded from the look for now.
-  const selectedIds = useCallback(() => [
-    current('top')?.id,
-    current('bottom')?.id,
-    current('shoes')?.id,
-  ].filter((id): id is string => Boolean(id)), [current]);
+  const selectedIds = useCallback(
+    () => OUTFIT_ORDER.map((category) => current(category)?.id).filter((id): id is string => Boolean(id)),
+    [current]
+  );
 
   function resetSavedState() {
     setSaved(false);
@@ -126,7 +126,7 @@ export default function OutfitDay() {
     setIdx((previous) => {
       const list = buckets[category];
       if (list.length === 0) return previous;
-      const minimum = category === 'jacket' ? -1 : 0;
+      const minimum = OPTIONAL.includes(category) ? -1 : 0;
       const stateCount = list.length - minimum;
       const offset = previous[category] - minimum;
       const next = ((offset + direction) % stateCount + stateCount) % stateCount + minimum;
@@ -147,15 +147,16 @@ export default function OutfitDay() {
       top: pick('top'),
       bottom: pick('bottom'),
       shoes: pick('shoes'),
-      jacket: -1,
+      jacket: pick('jacket', true),
+      accessory: pick('accessory', true),
     }));
   }
 
   /** Points each slot at the garments the stylist picked. */
   function applyOutfitIds(ids: string[]) {
     setIdx((previous) => {
-      const next: Indices = { ...previous, jacket: -1 };
-      const wearable: ClothingCategory[] = ['top', 'bottom', 'shoes'];
+      const next: Indices = { ...previous, jacket: -1, accessory: -1 };
+      const wearable: ClothingCategory[] = OUTFIT_ORDER;
       for (const id of ids) {
         for (const category of wearable) {
           const position = buckets[category].findIndex((piece) => piece.id === id);
@@ -225,7 +226,7 @@ export default function OutfitDay() {
   }
 
   async function validate() {
-    const worn = (['top', 'bottom', 'shoes'] as ClothingCategory[])
+    const worn = OUTFIT_ORDER
       .map((category) => current(category))
       .filter((piece): piece is Clothing => Boolean(piece));
 
