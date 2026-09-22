@@ -8,7 +8,7 @@ import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
-const ORDER: ClothingCategory[] = ['top', 'jacket', 'bottom', 'shoes'];
+const ORDER: ClothingCategory[] = ['top', 'jacket', 'bottom', 'shoes', 'accessory'];
 /** The render usually takes 30–90 s: the bar eases towards 95 % over this time. */
 const EXPECTED_MS = 70_000;
 

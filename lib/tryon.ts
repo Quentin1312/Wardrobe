@@ -9,6 +9,8 @@ export interface TryOnResponse {
   checked?: boolean;
   /** Remaining differences spotted by the check, in French. */
   warnings?: string[];
+  /** Accessories left out of the render (too small to look right). */
+  skipped?: string[];
   attempts?: number;
 }
 

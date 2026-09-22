@@ -200,6 +200,14 @@ function Verdict({ result }: { result: TryOnResponse | null }) {
   const { t } = useLocale();
   if (!result) return null;
   const warnings = result.warnings ?? [];
+  const skipped = result.skipped ?? [];
+
+  const note =
+    skipped.length > 0 ? (
+      <Text style={[typography.caption, { color: colors.textMuted }]}>
+        {t('tryon.skipped', { names: skipped.join(', ') })}
+      </Text>
+    ) : null;
 
   if (warnings.length > 0) {
     return (
@@ -223,11 +231,13 @@ function Verdict({ result }: { result: TryOnResponse | null }) {
           </Text>
         ))}
         <Text style={[typography.caption, { color: colors.textMuted }]}>{t('tryon.warningsHint')}</Text>
+        {note}
       </View>
     );
   }
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+    <View style={{ gap: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
       <Ionicons
         name={result.verified ? 'shield-checkmark' : 'information-circle-outline'}
         size={19}
@@ -236,6 +246,8 @@ function Verdict({ result }: { result: TryOnResponse | null }) {
       <Text style={[typography.bodyStrong, { color: result.verified ? colors.text : colors.textMuted, flex: 1 }]}>
         {result.verified ? t('tryon.verified') : t('tryon.unchecked')}
       </Text>
+      </View>
+      {note}
     </View>
   );
 }

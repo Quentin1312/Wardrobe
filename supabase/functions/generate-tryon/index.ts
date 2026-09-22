@@ -62,12 +62,16 @@ function json(body: unknown, status = 200) {
   });
 }
 
+/** Accessories worn on the head or face render well; small ones do not. */
+const HEAD_WORDS =
+  /casquette|bob|bonnet|chapeau|beret|béret|capuche|lunette|solaire|cap\b|hat|beanie|bucket|glasses|sunglasses|visor|headband|bandana/i;
+
 const CATEGORY_EN: Record<Category, string> = {
   jacket: 'jacket / outer layer',
   top: 'top',
   bottom: 'trousers / skirt / shorts',
   shoes: 'shoes',
-  accessory: 'accessory',
+  accessory: 'accessory worn on the head or face',
 };
 const ORDER: Category[] = ['jacket', 'top', 'bottom', 'shoes', 'accessory'];
 
@@ -119,6 +123,9 @@ function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
     'GARMENTS MUST BE COPIED EXACTLY from their reference images: same colour and shade, same fabric texture, same pattern or print, same logos and text, same buttons, zips, pockets, collar, sleeve length, trouser length and cut. Only adapt them to the body with natural folds and fit.',
     'Do not add any garment, layer, accessory, jewellery or logo that is not listed. Do not recolour, simplify, restyle or "improve" any garment.',
     hasShoes ? '' : 'Shoes are not provided: keep simple neutral shoes that do not draw attention.',
+    garments.some((g) => g.category === 'accessory')
+      ? 'The accessory is worn on the head or face (cap, hat, beanie, glasses): place it naturally, the right way round and at the right size, without hiding the face.'
+      : '',
     'THE PERSON MUST STAY THE SAME: same face and identity, same hairstyle and hair colour, same skin tone, same body shape and height. Do not beautify, slim or age them.',
     fixes.length ? `A previous attempt had these problems, fix them precisely: ${fixes.join(' ; ')}` : '',
   ]
@@ -184,6 +191,39 @@ async function renderOnce(person: Blob, garments: { row: ClothingRow; blob: Blob
   const b64: string | undefined = data?.data?.[0]?.b64_json;
   if (!b64) throw new Error('openai_empty_result');
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/** Is this accessory worn on the head or face (so worth rendering)? */
+async function isHeadAccessory(row: ClothingRow, dataUrl: string): Promise<boolean> {
+  if (row.name && HEAD_WORDS.test(row.name)) return true;
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: JUDGE_MODEL,
+        response_format: { type: 'json_object' },
+        reasoning_effort: 'low',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Is this accessory worn on the head or face — cap, bucket hat, beanie, hat, headband, bandana, glasses or sunglasses? Scarves count too. Anything small or worn elsewhere (watch, jewellery, ring, belt, bag) does not. Answer ONLY {"head":true} or {"head":false}.',
+              },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return JSON.parse(data?.choices?.[0]?.message?.content ?? '{}')?.head === true;
+  } catch {
+    return false;
+  }
 }
 
 /** Vision check of the result against every reference. Null when the check itself failed. */
@@ -292,25 +332,41 @@ Deno.serve(async (request) => {
     if (!modelPhoto) return json({ error: 'profile_photo_required' }, 400);
 
     const rows = ((clothes ?? []) as ClothingRow[])
-      .filter((c) => c.category && c.category !== 'accessory')
+      .filter((c) => Boolean(c.category))
       .sort((a, b) => ORDER.indexOf(a.category!) - ORDER.indexOf(b.category!))
-      .slice(0, 4);
-    if (rows.length === 0) return json({ error: 'no_compatible_garments' }, 400);
+      .slice(0, 5);
+    if (rows.filter((r) => r.category !== 'accessory').length === 0) {
+      return json({ error: 'no_compatible_garments' }, 400);
+    }
 
     // Clean cut-outs make the best references: the garment alone, no clutter.
     const [person, ...garmentBlobs] = await Promise.all([
       download(modelPhoto),
       ...rows.map((r) => download(r.photo_clean_url ?? r.photo_url)),
     ]);
-    const garments = rows.map((row, i) => ({ row, blob: garmentBlobs[i] }));
+    const allUrls = await Promise.all(
+      rows.map(async (row, i) => ({ row, blob: garmentBlobs[i], dataUrl: await toDataUrl(garmentBlobs[i]) }))
+    );
+    // A watch or a ring would only confuse the render: drop them, and say so.
+    const skipped: string[] = [];
+    const kept: typeof allUrls = [];
+    for (const entry of allUrls) {
+      if (entry.row.category === 'accessory' && !(await isHeadAccessory(entry.row, entry.dataUrl))) {
+        skipped.push(entry.row.name ?? 'accessoire');
+        continue;
+      }
+      kept.push(entry);
+    }
+    const garments = kept.map((g) => ({ row: g.row, blob: g.blob }));
     const personUrl = await toDataUrl(person);
-    const garmentUrls = await Promise.all(garments.map(async (g) => ({ row: g.row, dataUrl: await toDataUrl(g.blob) })));
+    const garmentUrls = kept.map((g) => ({ row: g.row, dataUrl: g.dataUrl }));
+    const keptRows = kept.map((g) => g.row);
 
     const attempt = async (fixes: string[]): Promise<Attempt> => {
       const bytes = await renderOnce(person, garments, fixes);
       const verdict = await judge(personUrl, garmentUrls, bytes);
       return verdict
-        ? { bytes, problems: problemsOf(verdict, rows), verified: true }
+        ? { bytes, problems: problemsOf(verdict, keptRows), verified: true }
         : { bytes, problems: [], verified: false };
     };
 
@@ -349,6 +405,7 @@ Deno.serve(async (request) => {
       verified: best.verified && best.problems.length === 0,
       checked: best.verified,
       warnings: best.problems,
+      skipped,
       attempts,
     });
   } catch (cause) {

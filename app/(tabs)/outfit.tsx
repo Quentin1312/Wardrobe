@@ -24,7 +24,7 @@ import { dateKey } from '@/lib/week';
 const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
 const OUTFIT_ORDER: ClothingCategory[] = ['top', 'jacket', 'bottom', 'shoes', 'accessory'];
 const OPTIONAL: ClothingCategory[] = ['jacket', 'accessory'];
-const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket', 'shoes'];
+const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket', 'shoes', 'accessory'];
 
 type Buckets = Record<ClothingCategory, Clothing[]>;
 type Indices = Record<ClothingCategory, number>;
