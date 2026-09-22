@@ -20,6 +20,8 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const IMAGE_MODEL = Deno.env.get('OPENAI_IMAGE_MODEL') ?? 'gpt-image-2.5-flare';
 const QUALITY = Deno.env.get('OPENAI_TRYON_QUALITY') ?? 'medium';
 const JUDGE_MODEL = Deno.env.get('OPENAI_JUDGE_MODEL') ?? 'gpt-5-mini';
+/** Set OPENAI_INPUT_FIDELITY=high for image models that support it. */
+const USE_FIDELITY = Deno.env.get('OPENAI_INPUT_FIDELITY') === 'high';
 
 /** Don't start a corrective attempt past this point (edge functions have a wall-clock limit). */
 const RETRY_BUDGET_MS = 70_000;
@@ -165,7 +167,8 @@ async function renderOnce(person: Blob, garments: { row: ClothingRow; blob: Blob
       body: form,
     });
 
-  let res = await call(build(true));
+  // gpt-image-2.5-flare rejects input_fidelity; only send it when asked to.
+  let res = await call(build(USE_FIDELITY));
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     const message: string = err?.error?.message ?? `openai error ${res.status}`;
@@ -195,12 +198,13 @@ async function judge(
       {
         type: 'text',
         text: [
-          'You are a strict quality checker for a virtual try-on.',
+          'You check a virtual try-on: is each garment recognisably THE SAME item as its reference photo?',
           'Image 1 is the original person. Then come the garment references, numbered as listed. The LAST image is the generated try-on.',
           ...garments.map((g, i) => describe(g.row, i + 2)),
-          'For each garment, say whether the generated image shows it faithfully. Flag real differences only: wrong colour or shade, missing or changed pattern/print/logo/text, different cut or length, missing or added details (buttons, pockets, collar), or garment absent. Ignore natural folds, fit, lighting and viewing angle.',
+          'Reference photos are amateur shots: wrinkled, on a hanger, open, badly lit. Being worn changes how a garment looks. So IGNORE: wrinkles vs smooth, buttoned vs open, tucked or not, drape and fit, brightness/exposure/white balance, shadows, viewing angle, labels or tags.',
+          'Flag ONLY identity changes: a clearly different colour (e.g. navy became black, beige became white), a pattern/print/stripes/logo/text added, removed or changed, a different garment type, clearly different length or sleeve length, a different collar or neckline, or the garment missing.',
           'Also check the person: same face/identity, hair, skin tone and body shape as image 1.',
-          'Answer ONLY with JSON: {"garments":[{"index":2,"ok":true,"problem":""}],"person_ok":true,"person_problem":""}. Problems must be short and concrete, in French.',
+          'When unsure, answer ok. Answer ONLY with JSON: {"garments":[{"index":2,"ok":true,"problem":""}],"person_ok":true,"person_problem":""}. Each problem: one short sentence in French (max 12 words).',
         ].join('\n'),
       },
       { type: 'image_url', image_url: { url: personUrl } },
@@ -214,6 +218,7 @@ async function judge(
         model: JUDGE_MODEL,
         messages: [{ role: 'user', content }],
         response_format: { type: 'json_object' },
+        reasoning_effort: 'low',
       }),
     });
     if (!res.ok) {
