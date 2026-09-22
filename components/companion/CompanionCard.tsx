@@ -8,6 +8,7 @@ import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { fetchClothes } from '@/lib/clothes';
 import { COMPANION_NAMES, companionLines } from '@/lib/companion';
+import { accessoryForWeather } from '@/lib/companion/accessories';
 import { fetchTodaysWornOutfit } from '@/lib/outfits';
 import { fetchWearStats, mostForgotten } from '@/lib/wear';
 import { categoryKey } from '@/constants/categories';
@@ -88,7 +89,14 @@ export function CompanionCard({ temp, weatherMain }: { temp: number | null; weat
       }}
     >
       <View style={{ alignItems: 'center' }}>
-        <CompanionAvatar kind={kind} size={104} mood={lookValidated ? 'happy' : 'idle'} onPress={next} bounceKey={index} />
+        <CompanionAvatar
+          kind={kind}
+          size={104}
+          mood={lookValidated ? 'happy' : 'idle'}
+          onPress={next}
+          bounceKey={index}
+          accessory={accessoryForWeather(temp, weatherMain)}
+        />
         <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>{COMPANION_NAMES[kind]}</Text>
       </View>
       <View style={{ flex: 1, paddingBottom: spacing.lg }}>

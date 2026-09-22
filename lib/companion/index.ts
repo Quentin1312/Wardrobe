@@ -109,11 +109,15 @@ export function companionLines(kind: CompanionKind, ctx: CompanionContext, local
 
   // Weather advice
   if (ctx.weatherMain === 'Rain' || ctx.weatherMain === 'Drizzle' || ctx.weatherMain === 'Thunderstorm') {
-    lines.push(fr ? 'Il pleut aujourd’hui : évite le daim et prends une veste.' : 'Rain today: skip the suede, grab a jacket.');
+    lines.push(fr ? 'Il pleut : j’ai sorti mon parapluie. Évite le daim et prends une veste.' : 'Rain today: I’ve got my umbrella. Skip the suede, grab a jacket.');
   } else if (ctx.weatherMain === 'Snow') {
-    lines.push(fr ? 'Il neige ! Couches chaudes et bonnes semelles.' : 'Snow! Warm layers and good soles.');
+    lines.push(fr ? 'Il neige ! J’ai mis mon bonnet. Couches chaudes et bonnes semelles.' : 'Snow! Beanie on. Warm layers and good soles.');
   } else if (ctx.temp !== null && ctx.temp <= 8) {
-    lines.push(fr ? `${ctx.temp}°, ça caille. Pense à une bonne couche.` : `${ctx.temp}°, it’s cold. Layer up.`);
+    lines.push(fr ? `${ctx.temp}°, ça caille : bonnet et écharpe pour moi. Pense à une bonne couche.` : `${ctx.temp}°, it’s cold: beanie and scarf for me. Layer up.`);
+  } else if (ctx.temp !== null && ctx.temp <= 13) {
+    lines.push(fr ? `${ctx.temp}°, un peu frais : j’ai pris mon écharpe. Une veste légère ?` : `${ctx.temp}°, a bit chilly: scarf on. A light jacket?`);
+  } else if (ctx.temp !== null && ctx.temp >= 22 && ctx.weatherMain === 'Clear') {
+    lines.push(fr ? `${ctx.temp}° et grand soleil : lunettes de soleil de rigueur. Léger et respirant.` : `${ctx.temp}° and sunny: shades on. Keep it light.`);
   } else if (ctx.temp !== null && ctx.temp >= 25) {
     lines.push(fr ? `${ctx.temp}° dehors : léger et respirant aujourd’hui.` : `${ctx.temp}° out: keep it light today.`);
   } else if (ctx.temp !== null) {

@@ -3,6 +3,7 @@ import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import { COMPANION_ART, type CompanionKind } from '@/lib/companion';
 import type { Shape } from '@/lib/companion/art';
+import { accessoryLayers, type CompanionAccessory } from '@/lib/companion/accessories';
 
 export type CompanionMood = 'idle' | 'happy' | 'thinking';
 
@@ -60,6 +61,7 @@ export function CompanionAvatar({
   mood = 'idle',
   onPress,
   bounceKey,
+  accessory,
 }: {
   kind: CompanionKind;
   size?: number;
@@ -67,8 +69,11 @@ export function CompanionAvatar({
   onPress?: () => void;
   /** Change this value to make the companion hop (e.g. when it speaks). */
   bounceKey?: unknown;
+  /** Weather outfit: umbrella, beanie + scarf, scarf or sunglasses. */
+  accessory?: CompanionAccessory | null;
 }) {
   const art = COMPANION_ART[kind];
+  const acc = useMemo(() => accessoryLayers(kind, accessory), [kind, accessory]);
   const unit = size / CANVAS;
 
   const breathe = useRef(new Animated.Value(0)).current;
@@ -183,11 +188,14 @@ export function CompanionAvatar({
 
   const content = (
     <Animated.View style={{ width: size, height: size, transform: styles.root }}>
+      {acc.back.length ? <Layer shapes={acc.back} size={size} /> : null}
       <Animated.View style={[StyleSheet.absoluteFill, { transform: styles.tail }]}>
         <Layer shapes={art.tail} size={size} />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, { transform: styles.body }]}>
         <Layer shapes={art.body} size={size} />
+        {acc.neck.length ? <Layer shapes={acc.neck} size={size} /> : null}
+        {acc.front.length ? <Layer shapes={acc.front} size={size} /> : null}
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, { transform: styles.head }]}>
         <Layer shapes={art.head} size={size} />
@@ -196,6 +204,7 @@ export function CompanionAvatar({
           <Layer shapes={art.lids} size={size} />
         </Animated.View>
         <Layer shapes={mood === 'happy' ? art.mouthHappy : art.mouthIdle} size={size} />
+        {acc.head.length ? <Layer shapes={acc.head} size={size} /> : null}
       </Animated.View>
     </Animated.View>
   );
