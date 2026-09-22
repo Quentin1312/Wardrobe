@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import { categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useContentBox } from '@/lib/imageBox';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
 interface OutfitStudioProps {
@@ -17,25 +18,46 @@ interface OutfitStudioProps {
   locked?: boolean;
 }
 
+/**
+ * Pieces are sized by the width of the garment itself (transparent margins
+ * ignored), as a share of the card width, so a top and trousers keep believable
+ * proportions whatever the photo. Bottoms hang from the waist line.
+ */
+const WIDTH = {
+  top: 0.56,
+  jacket: 0.58,
+  layerBack: 0.5,
+  layerFrontJacket: 0.52,
+  layerFrontTop: 0.46,
+  bottom: 0.4,
+  shoes: 0.44,
+};
+
+const UPPER_H = 262;
+/** Room kept free under the upper row's label and layer switch. */
+const UPPER_INSET = 48;
+const BOTTOM_H = 262;
+const SHOES_H = 112;
+
 export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: OutfitStudioProps) {
   const { colors } = useTheme();
   const top = current('top');
   const jacket = current('jacket');
   const accessory = current('accessory');
-  const [activeUpper, setActiveUpper] = useState<'top' | 'jacket'>('top');
-  const [jacketVisible, setJacketVisible] = useState(true);
-  const [accessoryVisible, setAccessoryVisible] = useState(true);
+  const [active, setActive] = useState<'top' | 'jacket'>('top');
 
+  // No jackets in the wardrobe: the arrows always drive the top.
   useEffect(() => {
-    if (jacket) setJacketVisible(true);
-  }, [jacket]);
+    if (counts.jacket === 0 && active === 'jacket') setActive('top');
+  }, [counts.jacket, active]);
 
-  useEffect(() => {
-    if (accessory) setAccessoryVisible(true);
-  }, [accessory]);
+  const showBottom = locked ? Boolean(current('bottom')) : counts.bottom > 0;
+  const showShoes = locked ? Boolean(current('shoes')) : counts.shoes > 0;
+  const showAccessory = locked ? Boolean(accessory) : counts.accessory > 0;
 
-  const showJacketLayer = counts.jacket > 0 || Boolean(jacket);
-  const showAccessoryLayer = counts.accessory > 0 || Boolean(accessory);
+  const sticker = showAccessory ? (
+    <AccessorySticker item={accessory} locked={locked} onPress={() => onNext('accessory')} />
+  ) : null;
 
   return (
     <View
@@ -47,140 +69,85 @@ export function OutfitStudio({ current, counts, onPrevious, onNext, locked }: Ou
         borderColor: colors.border,
       }}
     >
-      <UpperLayers
+      <UpperRow
         top={top}
         jacket={jacket}
-        showJacketLayer={showJacketLayer}
-        jacketVisible={jacketVisible}
-        active={activeUpper}
-        topCount={counts.top}
-        jacketCount={counts.jacket}
+        active={active}
+        hasJackets={counts.jacket > 0}
+        canCycle={active === 'top' ? counts.top > 1 : counts.jacket > 0}
         locked={locked}
-        onSetActive={setActiveUpper}
-        onToggleJacket={() => setJacketVisible((visible) => !visible)}
-        onPrevious={() => onPrevious(activeUpper)}
-        onNext={() => onNext(activeUpper)}
+        onSetActive={setActive}
+        onPrevious={() => onPrevious(active)}
+        onNext={() => onNext(active)}
+        overlay={showBottom ? null : sticker}
       />
 
-      {(['bottom', 'shoes'] as ClothingCategory[])
-        .filter((category) => (locked ? current(category) : counts[category] > 0))
-        .map((category) => (
-          <GarmentRow
-            key={category}
-            height={category === 'bottom' ? 228 : 118}
-            item={current(category)}
-            label={category}
-            canCycle={counts[category] > 1}
-            hideArrows={locked}
-            onPrevious={() => onPrevious(category)}
-            onNext={() => onNext(category)}
-          />
-        ))}
+      {showBottom ? (
+        <Row
+          height={BOTTOM_H}
+          category="bottom"
+          item={current('bottom')}
+          canCycle={counts.bottom > 1}
+          locked={locked}
+          onPrevious={() => onPrevious('bottom')}
+          onNext={() => onNext('bottom')}
+          overlay={sticker}
+        >
+          {(frame) => <FittedGarment item={current('bottom')} frame={frame} widthRatio={WIDTH.bottom} align="top" />}
+        </Row>
+      ) : null}
 
-      {showAccessoryLayer ? (
-        <AccessoryLayer
-          item={accessory}
-          visible={accessoryVisible}
-          canCycle={counts.accessory > 0}
-          hideArrows={locked}
-          onToggle={() => setAccessoryVisible((visible) => !visible)}
-          onPrevious={() => onPrevious('accessory')}
-          onNext={() => onNext('accessory')}
-        />
+      {showShoes ? (
+        <Row
+          height={SHOES_H}
+          category="shoes"
+          item={current('shoes')}
+          canCycle={counts.shoes > 1}
+          locked={locked}
+          onPrevious={() => onPrevious('shoes')}
+          onNext={() => onNext('shoes')}
+          labelLines={1}
+        >
+          {(frame) => <FittedGarment item={current('shoes')} frame={frame} widthRatio={WIDTH.shoes} />}
+        </Row>
       ) : null}
     </View>
   );
 }
 
-function UpperLayers({
-  top,
-  jacket,
-  showJacketLayer,
-  jacketVisible,
-  active,
-  topCount,
-  jacketCount,
+type Frame = { w: number; h: number };
+
+/** A slot of the studio: measures itself, then lets its garment fit inside. */
+function Row({
+  height,
+  category,
+  item,
+  canCycle,
   locked,
-  onSetActive,
-  onToggleJacket,
   onPrevious,
   onNext,
+  overlay,
+  labelLines = 2,
+  children,
 }: {
-  top: Clothing | null;
-  jacket: Clothing | null;
-  showJacketLayer: boolean;
-  jacketVisible: boolean;
-  active: 'top' | 'jacket';
-  topCount: number;
-  jacketCount: number;
+  height: number;
+  category: ClothingCategory;
+  item: Clothing | null;
+  canCycle: boolean;
   locked?: boolean;
-  onSetActive: (category: 'top' | 'jacket') => void;
-  onToggleJacket: () => void;
   onPrevious: () => void;
   onNext: () => void;
+  overlay?: ReactNode;
+  labelLines?: number;
+  children: (frame: Frame) => ReactNode;
 }) {
-  const { colors } = useTheme();
   const { t } = useLocale();
-  const activeItem = active === 'top' ? top : jacket;
-  const canCycle = active === 'top' ? topCount > 1 : jacketCount > 0;
-
+  const [frame, setFrame] = useState<Frame | null>(null);
   return (
-    <View style={{ height: 252, justifyContent: 'center' }}>
-      <View style={{ height: '100%', paddingHorizontal: locked ? spacing.lg : 48, paddingVertical: 8 }}>
-        <GarmentImage item={top} />
-        {jacket && jacketVisible ? (
-          <View
-            style={[StyleSheet.absoluteFill, { paddingHorizontal: locked ? spacing.lg : 48, paddingVertical: 8 }]}
-            pointerEvents="none"
-          >
-            <GarmentImage item={jacket} />
-          </View>
-        ) : null}
-      </View>
-
-      <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: '48%' }} pointerEvents="none">
-        <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>
-          {t(categoryKey(active))}
-        </Text>
-        <Text numberOfLines={2} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
-          {activeItem?.name ?? (active === 'jacket' ? t('outfitDay.none') : '')}
-        </Text>
-      </View>
-
-      {jacket ? (
-        <LayerEye visible={jacketVisible} label={t('category.jacket')} onPress={onToggleJacket} />
-      ) : null}
-
-      {showJacketLayer && !locked ? (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: spacing.sm,
-            alignSelf: 'center',
-            flexDirection: 'row',
-            gap: 4,
-            padding: 4,
-            borderRadius: radius.full,
-            backgroundColor: colors.bg,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-        >
-          <LayerTab
-            active={active === 'top'}
-            icon="shirt-outline"
-            label={t('category.top')}
-            onPress={() => onSetActive('top')}
-          />
-          <LayerTab
-            active={active === 'jacket'}
-            icon="body-outline"
-            label={t('category.jacket')}
-            onPress={() => onSetActive('jacket')}
-          />
-        </View>
-      ) : null}
-
+    <View style={{ height }} onLayout={(e: LayoutChangeEvent) => setFrame(sizeOf(e))}>
+      {frame ? children(frame) : null}
+      <Label eyebrow={t(categoryKey(category))} name={item?.name ?? null} narrow lines={labelLines} />
+      {overlay}
       {locked ? null : (
         <>
           <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
@@ -191,185 +158,328 @@ function UpperLayers({
   );
 }
 
-function LayerTab({
+function sizeOf(e: LayoutChangeEvent): Frame {
+  return { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height };
+}
+
+function UpperRow({
+  top,
+  jacket,
   active,
-  icon,
-  label,
-  onPress,
+  hasJackets,
+  canCycle,
+  locked,
+  onSetActive,
+  onPrevious,
+  onNext,
+  overlay,
 }: {
-  active: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
+  top: Clothing | null;
+  jacket: Clothing | null;
+  active: 'top' | 'jacket';
+  hasJackets: boolean;
+  canCycle: boolean;
+  locked?: boolean;
+  onSetActive: (layer: 'top' | 'jacket') => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  overlay?: ReactNode;
 }) {
-  const { colors } = useTheme();
+  const { t } = useLocale();
+  const [frame, setFrame] = useState<Frame | null>(null);
+  const layered = Boolean(top && jacket);
+  const activeItem = active === 'top' ? top : jacket;
+  const other = active === 'top' ? jacket : top;
+  const nameOf = (item: Clothing | null, layer: 'top' | 'jacket') =>
+    item ? item.name ?? t(categoryKey(layer)) : t('outfitDay.none');
+
+  let pieces: ReactNode = null;
+  if (frame) {
+    if (layered) {
+      // Flat-lay: the piece being edited in front, the other one offset behind.
+      const front = active === 'jacket' ? jacket : top;
+      const back = active === 'jacket' ? top : jacket;
+      const backLayer: 'top' | 'jacket' = active === 'jacket' ? 'top' : 'jacket';
+      pieces = (
+        <>
+          <FittedGarment
+            item={back}
+            frame={frame}
+            widthRatio={WIDTH.layerBack}
+            offsetX={-frame.w * 0.14}
+            insetTop={UPPER_INSET}
+            dim
+            onPress={locked ? undefined : () => onSetActive(backLayer)}
+          />
+          <FittedGarment
+            item={front}
+            frame={frame}
+            widthRatio={active === 'jacket' ? WIDTH.layerFrontJacket : WIDTH.layerFrontTop}
+            offsetX={frame.w * 0.12}
+            insetTop={UPPER_INSET}
+          />
+        </>
+      );
+    } else {
+      const only = top ?? jacket;
+      pieces = (
+        <FittedGarment item={only} frame={frame} widthRatio={only === jacket ? WIDTH.jacket : WIDTH.top} insetTop={UPPER_INSET} />
+      );
+    }
+  }
+
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      style={{
-        minHeight: 34,
-        paddingHorizontal: 12,
-        borderRadius: radius.full,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: active ? colors.text : 'transparent',
-      }}
-    >
-      <Ionicons name={icon} size={15} color={active ? colors.bg : colors.textMuted} />
-      <Text style={[typography.caption, { color: active ? colors.bg : colors.textMuted }]}>{label}</Text>
-    </Pressable>
+    <View style={{ height: UPPER_H }} onLayout={(e: LayoutChangeEvent) => setFrame(sizeOf(e))}>
+      {pieces}
+      <Label
+        eyebrow={t(categoryKey(active))}
+        name={nameOf(activeItem, active)}
+        extra={layered && other ? `+ ${nameOf(other, active === 'top' ? 'jacket' : 'top')}` : null}
+      />
+      {hasJackets && !locked ? <LayerSwitch active={active} onChange={onSetActive} /> : null}
+      {overlay}
+      {locked ? null : (
+        <>
+          <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
+          <Arrow side="right" disabled={!canCycle} onPress={onNext} />
+        </>
+      )}
+    </View>
   );
 }
 
-function LayerEye({ visible, label, onPress }: { visible: boolean; label: string; onPress: () => void }) {
+function Label({
+  eyebrow,
+  name,
+  extra,
+  narrow,
+  lines = 2,
+}: {
+  eyebrow: string;
+  name: string | null;
+  extra?: string | null;
+  /** Beside a centred garment: keep clear of it. */
+  narrow?: boolean;
+  lines?: number;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: narrow ? '28%' : '46%' }} pointerEvents="none">
+      <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{eyebrow}</Text>
+      {name ? (
+        <Text numberOfLines={lines} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
+          {name}
+        </Text>
+      ) : null}
+      {extra ? (
+        <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, fontSize: 11 }]}>
+          {extra}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** Top ↔ jacket: which layer the arrows change (tapping a piece works too). */
+function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange: (layer: 'top' | 'jacket') => void }) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const tab = (layer: 'top' | 'jacket', icon: keyof typeof Ionicons.glyphMap) => {
+    const on = active === layer;
+    return (
+      <Pressable
+        key={layer}
+        onPress={() => onChange(layer)}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: on }}
+        hitSlop={4}
+        style={{
+          minHeight: 30,
+          paddingHorizontal: 10,
+          borderRadius: radius.full,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+          backgroundColor: on ? colors.text : 'transparent',
+        }}
+      >
+        <Ionicons name={icon} size={13} color={on ? colors.bg : colors.textMuted} />
+        <Text style={[typography.caption, { color: on ? colors.bg : colors.textMuted, fontSize: 11 }]}>
+          {t(categoryKey(layer))}
+        </Text>
+      </Pressable>
+    );
+  };
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={t(visible ? 'outfitDay.hideLayer' : 'outfitDay.showLayer', { layer: label })}
-      hitSlop={8}
-      style={({ pressed }) => ({
+    <View
+      style={{
         position: 'absolute',
         right: spacing.sm,
         top: spacing.sm,
-        minHeight: 36,
-        paddingHorizontal: 10,
-        borderRadius: radius.full,
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
+        padding: 3,
+        gap: 2,
+        borderRadius: radius.full,
+        backgroundColor: colors.bg,
         borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: pressed ? colors.surfaceAlt : colors.bg,
+      }}
+    >
+      {tab('top', 'shirt-outline')}
+      {tab('jacket', 'layers-outline')}
+    </View>
+  );
+}
+
+/** Small corner tile: tap to go through the accessories (and "none"). */
+function AccessorySticker({ item, locked, onPress }: { item: Clothing | null; locked?: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  const { t } = useLocale();
+  if (locked && !item) return null;
+  return (
+    <Pressable
+      onPress={locked ? undefined : onPress}
+      disabled={locked}
+      accessibilityRole="button"
+      accessibilityLabel={item?.name ?? t('category.accessory')}
+      style={({ pressed }) => ({
+        position: 'absolute',
+        right: spacing.sm,
+        bottom: spacing.sm,
+        width: 70,
+        alignItems: 'center',
+        gap: 3,
+        opacity: pressed ? 0.8 : 1,
       })}
     >
-      <Ionicons name={visible ? 'eye-outline' : 'eye-off-outline'} size={17} color={colors.text} />
-      <Text style={[typography.caption, { color: colors.text }]}>{label}</Text>
+      <View
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: radius.lg,
+          backgroundColor: item ? '#EFEEE9' : 'transparent',
+          borderWidth: item ? 0 : 1.5,
+          borderStyle: item ? 'solid' : 'dashed',
+          borderColor: colors.borderStrong,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 6,
+        }}
+      >
+        {item ? (
+          <Image
+            source={{ uri: item.photo_clean_url ?? item.photo_url }}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            recyclingKey={item.id}
+          />
+        ) : (
+          <Ionicons name="add" size={24} color={colors.textMuted} />
+        )}
+      </View>
+      <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, fontSize: 10, maxWidth: 70 }]}>
+        {item?.name ?? t('category.accessory')}
+      </Text>
     </Pressable>
   );
 }
 
-function AccessoryLayer({
+/**
+ * Draws a garment so that its visible part is `widthRatio` of the frame wide
+ * (never taller than the frame), centred or hung from the top.
+ */
+function FittedGarment({
   item,
-  visible,
-  canCycle,
-  hideArrows,
-  onToggle,
-  onPrevious,
-  onNext,
+  frame,
+  widthRatio,
+  align = 'center',
+  offsetX = 0,
+  insetTop = 0,
+  dim,
+  onPress,
 }: {
   item: Clothing | null;
-  visible: boolean;
-  canCycle: boolean;
-  hideArrows?: boolean;
-  onToggle: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
+  frame: Frame;
+  widthRatio: number;
+  align?: 'center' | 'top';
+  offsetX?: number;
+  /** Space reserved at the top of the frame (labels). */
+  insetTop?: number;
+  dim?: boolean;
+  onPress?: () => void;
 }) {
   const { colors } = useTheme();
-  const { t } = useLocale();
-  return (
-    <View style={{ height: 116, justifyContent: 'center', borderTopWidth: 1, borderTopColor: colors.border }}>
-      <View
-        style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: '42%', zIndex: 2 }}
-        pointerEvents="none"
-      >
-        <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{t('outfitDay.finalTouch')}</Text>
-        <Text numberOfLines={2} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
-          {item?.name ?? t('outfitDay.none')}
-        </Text>
-      </View>
+  const uri = item ? item.photo_clean_url ?? item.photo_url : null;
+  const box = useContentBox(uri);
 
-      <View style={{ height: '100%', paddingHorizontal: hideArrows ? spacing.lg : 54, paddingVertical: 5 }}>
-        {item && visible ? (
-          <GarmentImage item={item} />
-        ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name={visible ? 'sparkles-outline' : 'eye-off-outline'} size={25} color={colors.textMuted} />
-          </View>
-        )}
-      </View>
-
-      {item ? <LayerEye visible={visible} label={t('category.accessory')} onPress={onToggle} /> : null}
-      {hideArrows ? null : (
-        <>
-          <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
-          <Arrow side="right" disabled={!canCycle} onPress={onNext} />
-        </>
-      )}
-    </View>
-  );
-}
-
-function GarmentRow({
-  item,
-  label,
-  height,
-  canCycle,
-  hideArrows,
-  onPrevious,
-  onNext,
-}: {
-  item: Clothing | null;
-  label: ClothingCategory;
-  height: number;
-  canCycle: boolean;
-  hideArrows?: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
-  const { colors } = useTheme();
-  const { t } = useLocale();
-  return (
-    <View style={{ height, justifyContent: 'center' }}>
-      <View style={{ height: '100%', paddingHorizontal: hideArrows ? spacing.lg : 52, paddingVertical: 2 }}>
-        <GarmentImage item={item} />
-      </View>
-
-      <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: '45%' }} pointerEvents="none">
-        <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{t(categoryKey(label))}</Text>
-        {item?.name ? (
-          <Text numberOfLines={2} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
-            {item.name}
-          </Text>
-        ) : null}
-      </View>
-
-      {hideArrows ? null : (
-        <>
-          <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
-          <Arrow side="right" disabled={!canCycle} onPress={onNext} />
-        </>
-      )}
-    </View>
-  );
-}
-
-function GarmentImage({ item }: { item: Clothing | null }) {
-  const { colors } = useTheme();
-  if (!item) {
+  if (!item || !uri) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={[typography.caption, { color: colors.textMuted }]}>—</Text>
       </View>
     );
   }
+
+  const padY = 10;
+  const top0 = insetTop + padY;
+  const maxH = frame.h - top0 - padY;
+  let rect: { left: number; top: number; width: number; height: number };
+  let hit: { left: number; top: number; width: number; height: number };
+
+  if (box) {
+    const bw = box.w * box.width;
+    const bh = box.h * box.height;
+    let s = (frame.w * widthRatio) / bw;
+    if (bh * s > maxH) s = maxH / bh;
+    const cx = frame.w / 2 + offsetX;
+    const cy = align === 'top' ? top0 + (bh * s) / 2 : top0 + maxH / 2;
+    rect = {
+      left: cx - (box.x * box.width + bw / 2) * s,
+      top: cy - (box.y * box.height + bh / 2) * s,
+      width: box.width * s,
+      height: box.height * s,
+    };
+    hit = { left: cx - (bw * s) / 2, top: cy - (bh * s) / 2, width: bw * s, height: bh * s };
+  } else {
+    // Not measured (yet, or on native): plain fit in a box of the target width.
+    const width = frame.w * widthRatio;
+    rect = { left: frame.w / 2 + offsetX - width / 2, top: top0, width, height: maxH };
+    hit = rect;
+  }
+
   return (
-    <Image
-      source={{ uri: item.photo_clean_url ?? item.photo_url }}
-      style={{ width: '100%', height: '100%' }}
-      contentFit="contain"
-      transition={180}
-      cachePolicy="memory-disk"
-      recyclingKey={item.id}
-      priority="high"
-    />
+    <>
+      <View pointerEvents="none" style={{ position: 'absolute', ...rect, opacity: box === undefined ? 0 : dim ? 0.82 : 1 }}>
+        <Image
+          source={{ uri }}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="contain"
+          contentPosition={align === 'top' ? 'top' : 'center'}
+          transition={160}
+          cachePolicy="memory-disk"
+          recyclingKey={item.id}
+          priority="high"
+        />
+      </View>
+      {onPress ? (
+        // Kept inside the frame: on web, focusing an element that pokes out of an
+        // overflow-hidden card scrolls the whole card sideways.
+        <Pressable accessibilityRole="button" onPress={onPress} style={{ position: 'absolute', ...clampTo(hit, frame) }} />
+      ) : null}
+    </>
   );
+}
+
+function clampTo(r: { left: number; top: number; width: number; height: number }, frame: Frame) {
+  const left = Math.max(0, r.left);
+  const top = Math.max(0, r.top);
+  return {
+    left,
+    top,
+    width: Math.max(0, Math.min(frame.w, r.left + r.width) - left),
+    height: Math.max(0, Math.min(frame.h, r.top + r.height) - top),
+  };
 }
 
 function Arrow({
@@ -404,11 +514,7 @@ function Arrow({
         opacity: disabled ? 0.28 : 1,
       })}
     >
-      <Ionicons
-        name={side === 'left' ? 'chevron-back' : 'chevron-forward'}
-        size={22}
-        color={colors.text}
-      />
+      <Ionicons name={side === 'left' ? 'chevron-back' : 'chevron-forward'} size={22} color={colors.text} />
     </Pressable>
   );
 }
