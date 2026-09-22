@@ -63,7 +63,9 @@ function measure(uri: string): Promise<ContentBox | null> {
       }
     };
     img.onerror = () => resolve(null);
-    img.src = uri;
+    // Separate URL from the one <img> tags use: a copy cached without CORS
+    // headers would otherwise taint the canvas and block the measurement.
+    img.src = uri.startsWith('data:') ? uri : `${uri}${uri.includes('?') ? '&' : '?'}box=1`;
   });
 }
 
