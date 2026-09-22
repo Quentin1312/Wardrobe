@@ -67,6 +67,11 @@ Deno.serve(async (req) => {
     // a fraction of the transfer size of a full-resolution PNG.
     form.append('size', 'preview');
     form.append('format', 'webp');
+    // Garments are products: use remove.bg's product model. Cropping to the
+    // piece (with a small margin) makes every item render at the same scale.
+    form.append('type', 'product');
+    form.append('crop', 'true');
+    form.append('crop_margin', '4%');
 
     const bgRes = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',

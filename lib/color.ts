@@ -22,20 +22,30 @@ async function toLocalUri(uri: string, key: string): Promise<string> {
   return local;
 }
 
-export async function extractDominantColor(uri: string, key = 'sample'): Promise<string | null> {
+/** RGBA pixels of a photo shrunk to `width` (no alpha: flattened to JPEG). */
+export async function samplePixels(
+  uri: string,
+  width: number,
+  key = 'sample'
+): Promise<{ data: Uint8Array; width: number; height: number } | null> {
   try {
     const src = await toLocalUri(uri, key);
-    const small = await ImageManipulator.manipulateAsync(src, [{ resize: { width: SAMPLE_WIDTH } }], {
+    const small = await ImageManipulator.manipulateAsync(src, [{ resize: { width } }], {
       compress: 0.9,
       format: ImageManipulator.SaveFormat.JPEG,
       base64: true,
     });
     if (!small.base64) return null;
     const img = jpeg.decode(new Uint8Array(decodeBase64(small.base64)), { useTArray: true });
-    return dominantFromPixels(img.data, img.width, img.height);
+    return { data: img.data, width: img.width, height: img.height };
   } catch {
     return null;
   }
+}
+
+export async function extractDominantColor(uri: string, key = 'sample'): Promise<string | null> {
+  const img = await samplePixels(uri, SAMPLE_WIDTH, key);
+  return img ? dominantFromPixels(img.data, img.width, img.height) : null;
 }
 
 type RGB = [number, number, number];
