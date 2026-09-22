@@ -21,6 +21,9 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
+        {/* Restores routes redirected by public/404.html on GitHub Pages. */}
+        <script dangerouslySetInnerHTML={{ __html: spaRouteRestore }} />
+
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: documentStyle }} />
       </head>
@@ -37,4 +40,19 @@ html, body, #root {
 @media (prefers-color-scheme: light) {
   html, body, #root { background-color: #F2F2EE; }
 }
+`;
+
+const spaRouteRestore = `
+(function (location) {
+  if (location.search.slice(0, 2) !== '?/') return;
+  var parts = location.search.slice(1).split('&').map(function (part) {
+    return part.replace(/~and~/g, '&');
+  });
+  history.replaceState(
+    null,
+    '',
+    location.pathname.slice(0, -1) + parts.shift() +
+      (parts.length ? '?' + parts.join('&') : '') + location.hash
+  );
+})(window.location);
 `;

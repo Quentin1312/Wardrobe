@@ -4,7 +4,9 @@ import { Alert } from 'react-native';
 const pickerOptions: ImagePicker.ImagePickerOptions = {
   mediaTypes: ImagePicker.MediaTypeOptions.Images,
   quality: 0.85,
-  base64: true,
+  // The upload pipeline reads the local URI and compresses it itself. Avoiding
+  // a full-size base64 copy keeps photo selection fast and memory-efficient.
+  base64: false,
   allowsEditing: false,
 };
 

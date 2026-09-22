@@ -26,6 +26,7 @@ import {
   setClothingFavorite,
 } from '@/lib/clothes';
 import type { Clothing } from '@/lib/types';
+import { optimizeLegacyCleanPhotos } from '@/lib/images';
 import { daysSince, fetchWearStats, wornLabel, type WearStat } from '@/lib/wear';
 
 export default function ItemSheet() {
@@ -106,6 +107,9 @@ export default function ItemSheet() {
     setMsg(null);
     setBusy(true);
     const res = await removeBackground(item.id);
+    if (res.url) {
+      await optimizeLegacyCleanPhotos([{ ...item, photo_clean_url: res.url }]);
+    }
     setBusy(false);
     if (res.error) setMsg(res.error);
     else load();
@@ -186,6 +190,8 @@ export default function ItemSheet() {
             contentFit="contain"
             transition={180}
             cachePolicy="memory-disk"
+            recyclingKey={item.id}
+            priority="high"
           />
           {busy ? (
             <View

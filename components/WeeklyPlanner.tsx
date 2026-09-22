@@ -173,6 +173,8 @@ export function WeeklyPlanner({
                 contentFit="contain"
                 cachePolicy="memory-disk"
                 transition={180}
+                recyclingKey={item.id}
+                priority="high"
               />
             </View>
           ))}

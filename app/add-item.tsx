@@ -15,6 +15,7 @@ import { addClothing, removeBackground } from '@/lib/clothes';
 import type { ClothingCategory } from '@/lib/types';
 import { uploadImage } from '@/lib/upload';
 import { extractDominantColor } from '@/lib/color';
+import { optimizeLegacyCleanPhotos } from '@/lib/images';
 
 export default function AddItem() {
   const { colors } = useTheme();
@@ -41,7 +42,10 @@ export default function AddItem() {
       const clothing = await addClothing({ userId, photoUrl: url, category, name, dominantColor });
       // Remove the background so the piece renders cleanly on the mannequin.
       setProcessing(true);
-      await removeBackground(clothing.id); // best-effort; item is saved regardless
+      const clean = await removeBackground(clothing.id); // best-effort; item is saved regardless
+      if (clean.url) {
+        await optimizeLegacyCleanPhotos([{ ...clothing, photo_clean_url: clean.url }]);
+      }
       router.back();
     } catch (e: any) {
       Alert.alert(t('add.failed'), e.message ?? t('add.failedMsg'));

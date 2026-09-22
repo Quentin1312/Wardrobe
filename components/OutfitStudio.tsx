@@ -86,6 +86,8 @@ function GarmentRow({
             contentFit="contain"
             transition={240}
             cachePolicy="memory-disk"
+            recyclingKey={item.id}
+            priority="high"
           />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

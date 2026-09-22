@@ -1,14 +1,40 @@
 import { supabase } from '@/lib/supabase';
+import { prefetchClothingImages } from '@/lib/images';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 
+const CACHE_TTL_MS = 45_000;
+const clothesCache = new Map<string, { at: number; items: Clothing[] }>();
+const clothesRequests = new Map<string, Promise<Clothing[]>>();
+
+function invalidateClothesCache(): void {
+  clothesCache.clear();
+}
+
 export async function fetchClothes(userId: string): Promise<Clothing[]> {
-  const { data, error } = await supabase
-    .from('clothes')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data as Clothing[]) ?? [];
+  const cached = clothesCache.get(userId);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    prefetchClothingImages(cached.items);
+    return cached.items;
+  }
+
+  const existing = clothesRequests.get(userId);
+  if (existing) return existing;
+
+  const request = (async () => {
+    const { data, error } = await supabase
+      .from('clothes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const items = (data as Clothing[]) ?? [];
+    clothesCache.set(userId, { at: Date.now(), items });
+    prefetchClothingImages(items);
+    return items;
+  })().finally(() => clothesRequests.delete(userId));
+
+  clothesRequests.set(userId, request);
+  return request;
 }
 
 export async function addClothing(input: {
@@ -32,6 +58,7 @@ export async function addClothing(input: {
     .select()
     .single();
   if (error) throw error;
+  invalidateClothesCache();
   return data as Clothing;
 }
 
@@ -51,21 +78,25 @@ export async function renameClothing(id: string, name: string): Promise<void> {
     .update({ name: name.trim() || null })
     .eq('id', id);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 export async function setClothingFavorite(id: string, favorite: boolean): Promise<void> {
   const { error } = await supabase.from('clothes').update({ favorite }).eq('id', id);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 export async function setClothingColor(id: string, hex: string): Promise<void> {
   const { error } = await supabase.from('clothes').update({ dominant_color: hex }).eq('id', id);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 export async function setClothingDirty(id: string, dirty: boolean): Promise<void> {
   const { error } = await supabase.from('clothes').update({ dirty }).eq('id', id);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 /** Sends a whole outfit to the laundry basket after it has been worn. */
@@ -73,6 +104,7 @@ export async function markOutfitDirty(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const { error } = await supabase.from('clothes').update({ dirty: true }).in('id', ids);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 /** Laundry day: everything comes back clean. */
@@ -83,11 +115,13 @@ export async function washAll(userId: string): Promise<void> {
     .eq('user_id', userId)
     .eq('dirty', true);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 export async function deleteClothing(id: string): Promise<void> {
   const { error } = await supabase.from('clothes').delete().eq('id', id);
   if (error) throw error;
+  invalidateClothesCache();
 }
 
 /** Removes the background of a clothing photo (remove.bg edge function). */
@@ -108,6 +142,7 @@ export async function removeBackground(
     return { error: detail };
   }
   if (data?.error) return { error: data.error };
+  invalidateClothesCache();
   return { url: data?.url as string, cached: Boolean(data?.cached) };
 }
 

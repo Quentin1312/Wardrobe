@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { cleanMissingBackgrounds, fetchClothes, setClothingColor, washAll } from '@/lib/clothes';
 import { colorName, extractDominantColor } from '@/lib/color';
+import { clothingImageUri, optimizeLegacyCleanPhotos } from '@/lib/images';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { FORGOTTEN_DAYS, fetchWearStats, isForgotten, wornLabel, type WearStat } from '@/lib/wear';
 
@@ -64,6 +65,15 @@ export default function Wardrobe() {
       setItems(fetched);
       setWear(stats);
       backfillColors(fetched);
+      // Let the visible cards paint first, then silently replace legacy,
+      // full-resolution PNG cutouts with compact display assets.
+      setTimeout(() => {
+        void optimizeLegacyCleanPhotos(fetched, (id, url) => {
+          setItems((current) => current.map((piece) => (
+            piece.id === id ? { ...piece, photo_clean_url: url } : piece
+          )));
+        });
+      }, 900);
     } catch {
       // empty state covers it
     } finally {
@@ -153,6 +163,10 @@ export default function Wardrobe() {
           data={shown}
           keyExtractor={(i) => i.id}
           numColumns={2}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          updateCellsBatchingPeriod={40}
+          windowSize={5}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={{ gap: spacing.md, paddingHorizontal: spacing.screen }}
           contentContainerStyle={{
@@ -389,7 +403,7 @@ function ClothingCard({
 }) {
   const { colors } = useTheme();
   const { t, locale } = useLocale();
-  const uri = item.photo_clean_url ?? item.photo_url;
+  const uri = clothingImageUri(item);
 
   return (
     <Pressable
@@ -411,6 +425,8 @@ function ClothingCard({
           contentFit="contain"
           transition={180}
           cachePolicy="memory-disk"
+          recyclingKey={item.id}
+          priority="normal"
         />
         {item.dirty ? (
           <View

@@ -62,8 +62,11 @@ Deno.serve(async (req) => {
     // Call remove.bg with the original photo URL.
     const form = new FormData();
     form.append('image_url', item.photo_url);
-    form.append('size', 'auto');
-    form.append('format', 'png');
+    // A wardrobe card does not need a 25 MP source. Preview output is large
+    // enough for the UI, uses a quarter credit, and WebP keeps transparency at
+    // a fraction of the transfer size of a full-resolution PNG.
+    form.append('size', 'preview');
+    form.append('format', 'webp');
 
     const bgRes = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',
@@ -82,11 +85,15 @@ Deno.serve(async (req) => {
       return json({ error: detail }, 502);
     }
 
-    const pngBytes = new Uint8Array(await bgRes.arrayBuffer());
-    const cleanPath = `${userId}/${clothingId}-clean.png`;
+    const webpBytes = new Uint8Array(await bgRes.arrayBuffer());
+    const cleanPath = `${userId}/${clothingId}-clean.webp`;
     const { error: uploadErr } = await supabase.storage
       .from('clothes')
-      .upload(cleanPath, pngBytes, { contentType: 'image/png', upsert: true });
+      .upload(cleanPath, webpBytes, {
+        contentType: 'image/webp',
+        cacheControl: '31536000',
+        upsert: true,
+      });
     if (uploadErr) return json({ error: uploadErr.message }, 500);
 
     const { data: pub } = supabase.storage.from('clothes').getPublicUrl(cleanPath);

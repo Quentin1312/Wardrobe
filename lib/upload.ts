@@ -1,6 +1,9 @@
 import { decode } from 'base64-arraybuffer';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
+
+const MAX_UPLOAD_EDGE = 1600;
 
 /**
  * Uploads a local image (from camera / picker) to a Supabase storage bucket.
@@ -11,14 +14,33 @@ export async function uploadImage(
   path: string,
   asset: ImagePicker.ImagePickerAsset
 ): Promise<string> {
-  if (!asset.base64) {
-    throw new Error('Image asset has no base64 data. Request base64 in the picker options.');
-  }
+  // Phone photos can easily weigh 5-15 MB. The app never displays them at that
+  // resolution, so normalise them before sending anything over the network.
+  const largestEdge = Math.max(asset.width ?? 0, asset.height ?? 0);
+  const resize = largestEdge > MAX_UPLOAD_EDGE
+    ? asset.width >= asset.height
+      ? { resize: { width: MAX_UPLOAD_EDGE } }
+      : { resize: { height: MAX_UPLOAD_EDGE } }
+    : null;
+  const prepared = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    resize ? [resize] : [],
+    {
+      base64: true,
+      compress: 0.8,
+      format: ImageManipulator.SaveFormat.JPEG,
+    }
+  );
 
-  const contentType = asset.mimeType ?? 'image/jpeg';
+  if (!prepared.base64) throw new Error('Unable to prepare image for upload.');
+
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(path, decode(asset.base64), { contentType, upsert: true });
+    .upload(path, decode(prepared.base64), {
+      contentType: 'image/jpeg',
+      cacheControl: '31536000',
+      upsert: true,
+    });
 
   if (error) throw error;
 

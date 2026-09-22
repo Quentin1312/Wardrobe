@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, Text, View } from 'react-native';
 import { categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
@@ -42,7 +43,10 @@ export function OutfitCard({
                 height: 190,
                 backgroundColor: '#F7F7F4',
               }}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={160}
+              recyclingKey={c.id}
             />
           </View>
         ))}

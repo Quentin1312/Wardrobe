@@ -162,6 +162,7 @@ export function OutfitConfirmed({
                     style={{ width: '100%', height: '100%' }}
                     contentFit="contain"
                     cachePolicy="memory-disk"
+                    recyclingKey={item.id}
                   />
                 </Animated.View>
               );
