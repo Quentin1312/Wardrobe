@@ -41,6 +41,10 @@ const WIDTH = {
 /** How far the back layer peeks out on the left, as a share of the card width. */
 const LAYER_SHIFT = 0.17;
 
+/** Upper layers, from the skin outwards. */
+export type Layer = 'top' | 'mid' | 'jacket';
+const LAYERS: Layer[] = ['top', 'mid', 'jacket'];
+
 const UPPER_H = 262;
 /** Room kept free under the upper row's label and layer switch. */
 const UPPER_INSET = 48;
@@ -58,16 +62,21 @@ export function OutfitStudio({
   locked,
 }: OutfitStudioProps) {
   const { colors } = useTheme();
-  const top = current('top');
-  const jacket = current('jacket');
   const accessory = current('accessory');
   const worn = selectedAccessories ?? (accessory ? [accessory] : []);
-  const [active, setActive] = useState<'top' | 'jacket'>('top');
+  const [active, setActive] = useState<Layer>('top');
+  // Worn upper layers, in wearing order; the switch offers what the wardrobe has.
+  const wornLayers = LAYERS.map((layer) => ({ layer, item: current(layer) })).filter(
+    (entry): entry is { layer: Layer; item: Clothing } => Boolean(entry.item)
+  );
+  const availableLayers = locked
+    ? wornLayers.map((entry) => entry.layer)
+    : LAYERS.filter((layer) => counts[layer] > 0);
 
-  // No jackets in the wardrobe: the arrows always drive the top.
+  // Nothing of that kind in the wardrobe: the arrows go back to the top.
   useEffect(() => {
-    if (counts.jacket === 0 && active === 'jacket') setActive('top');
-  }, [counts.jacket, active]);
+    if (counts[active] === 0 && active !== 'top') setActive('top');
+  }, [counts, active]);
 
   const showBottom = locked ? Boolean(current('bottom')) : counts.bottom > 0;
   const showShoes = locked ? Boolean(current('shoes')) : counts.shoes > 0;
@@ -84,11 +93,10 @@ export function OutfitStudio({
       }}
     >
       <UpperRow
-        top={top}
-        jacket={jacket}
+        pieces={wornLayers}
         active={active}
-        hasJackets={counts.jacket > 0}
-        canCycle={active === 'top' ? counts.top > 1 : counts.jacket > 0}
+        available={availableLayers}
+        canCycle={active === 'top' ? counts.top > 1 : counts[active] > 0}
         locked={locked}
         onSetActive={setActive}
         onPrevious={() => onPrevious(active)}
@@ -251,10 +259,9 @@ function sizeOf(e: LayoutChangeEvent): Frame {
 }
 
 function UpperRow({
-  top,
-  jacket,
+  pieces,
   active,
-  hasJackets,
+  available,
   canCycle,
   locked,
   onSetActive,
@@ -262,68 +269,68 @@ function UpperRow({
   onNext,
   overlay,
 }: {
-  top: Clothing | null;
-  jacket: Clothing | null;
-  active: 'top' | 'jacket';
-  hasJackets: boolean;
+  /** The upper layers currently worn, in wearing order. */
+  pieces: { layer: Layer; item: Clothing }[];
+  active: Layer;
+  /** Layers the wardrobe can offer (the switch only shows those). */
+  available: Layer[];
   canCycle: boolean;
   locked?: boolean;
-  onSetActive: (layer: 'top' | 'jacket') => void;
+  onSetActive: (layer: Layer) => void;
   onPrevious: () => void;
   onNext: () => void;
   overlay?: ReactNode;
 }) {
   const { t } = useLocale();
   const [frame, setFrame] = useState<Frame | null>(null);
-  const layered = Boolean(top && jacket);
-  const activeItem = active === 'top' ? top : jacket;
-  const other = active === 'top' ? jacket : top;
-  const nameOf = (item: Clothing | null, layer: 'top' | 'jacket') =>
-    item ? item.name ?? t(categoryKey(layer)) : t('outfitDay.none');
+  const activeEntry = pieces.find((piece) => piece.layer === active) ?? pieces[0] ?? null;
+  const others = pieces.filter((piece) => piece !== activeEntry);
+  const nameOf = (entry: { layer: Layer; item: Clothing }) => entry.item.name ?? t(categoryKey(entry.layer));
 
-  let pieces: ReactNode = null;
-  if (frame) {
-    if (layered) {
-      // Flat-lay: the piece being edited in front, the other one offset behind.
-      const front = active === 'jacket' ? jacket : top;
-      const back = active === 'jacket' ? top : jacket;
-      const backLayer: 'top' | 'jacket' = active === 'jacket' ? 'top' : 'jacket';
-      pieces = (
-        <>
-          <FittedGarment
-            item={back}
-            frame={frame}
-            widthRatio={WIDTH.layerBack}
-            offsetX={-frame.w * LAYER_SHIFT}
-            insetTop={UPPER_INSET}
-            dim
-            onPress={locked ? undefined : () => onSetActive(backLayer)}
-          />
-          <FittedGarment
-            item={front}
-            frame={frame}
-            widthRatio={active === 'jacket' ? WIDTH.layerFrontJacket : WIDTH.layerFrontTop}
-            insetTop={UPPER_INSET}
-          />
-        </>
-      );
-    } else {
-      const only = top ?? jacket;
-      pieces = (
-        <FittedGarment item={only} frame={frame} widthRatio={only === jacket ? WIDTH.jacket : WIDTH.top} insetTop={UPPER_INSET} />
-      );
-    }
-  }
+  // The layer being edited sits on the card axis; the others peek out behind,
+  // spread left and right so a t-shirt + jumper + coat all stay readable.
+  const spread = [-LAYER_SHIFT, LAYER_SHIFT, -LAYER_SHIFT * 1.8];
+  const frontRatio = pieces.length >= 3 ? 0.46 : pieces.length === 2 ? 0.5 : WIDTH.top;
+  const backRatio = pieces.length >= 3 ? 0.4 : WIDTH.layerBack;
 
   return (
     <View style={{ height: UPPER_H }} onLayout={(e: LayoutChangeEvent) => setFrame(sizeOf(e))}>
-      {pieces}
+      {frame
+        ? [
+            ...others.map((entry, i) => (
+              <FittedGarment
+                key={entry.item.id}
+                item={entry.item}
+                frame={frame}
+                widthRatio={backRatio}
+                offsetX={frame.w * (spread[i] ?? -LAYER_SHIFT)}
+                insetTop={UPPER_INSET}
+                dim
+                onPress={locked ? undefined : () => onSetActive(entry.layer)}
+              />
+            )),
+            activeEntry ? (
+              <FittedGarment
+                key={activeEntry.item.id}
+                item={activeEntry.item}
+                frame={frame}
+                widthRatio={frontRatio}
+                insetTop={UPPER_INSET}
+              />
+            ) : (
+              <FittedGarment key="empty" item={null} frame={frame} widthRatio={WIDTH.top} insetTop={UPPER_INSET} />
+            ),
+          ]
+        : null}
+
       <Label
         eyebrow={t(categoryKey(active))}
-        name={nameOf(activeItem, active)}
-        extra={layered && other ? `+ ${nameOf(other, active === 'top' ? 'jacket' : 'top')}` : null}
+        name={activeEntry && activeEntry.layer === active ? nameOf(activeEntry) : t('outfitDay.none')}
+        extra={others.length > 0 ? `+ ${others.map(nameOf).join(' + ')}` : null}
       />
-      {hasJackets && !locked ? <LayerSwitch active={active} onChange={onSetActive} /> : null}
+      {available.length > 1 && !locked ? (
+        <LayerSwitch active={active} available={available} onChange={onSetActive} />
+      ) : null}
       {overlay}
       {locked ? null : (
         <>
@@ -367,11 +374,23 @@ function Label({
   );
 }
 
-/** Top ↔ jacket: which layer the arrows change (tapping a piece works too). */
-function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange: (layer: 'top' | 'jacket') => void }) {
+function LayerSwitch({
+  active,
+  available,
+  onChange,
+}: {
+  active: Layer;
+  available: Layer[];
+  onChange: (layer: Layer) => void;
+}) {
   const { colors } = useTheme();
   const { t } = useLocale();
-  const tab = (layer: 'top' | 'jacket', icon: keyof typeof Ionicons.glyphMap) => {
+  const ICONS: Record<Layer, keyof typeof Ionicons.glyphMap> = {
+    top: 'shirt-outline',
+    mid: 'shirt',
+    jacket: 'shirt-outline',
+  };
+  const tab = (layer: Layer) => {
     const on = active === layer;
     return (
       <Pressable
@@ -382,7 +401,7 @@ function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange:
         hitSlop={4}
         style={{
           minHeight: 30,
-          paddingHorizontal: 10,
+          paddingHorizontal: 9,
           borderRadius: radius.full,
           flexDirection: 'row',
           alignItems: 'center',
@@ -393,7 +412,7 @@ function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange:
         {layer === 'jacket' ? (
           <JacketGlyph color={on ? colors.bg : colors.textMuted} />
         ) : (
-          <Ionicons name={icon} size={13} color={on ? colors.bg : colors.textMuted} />
+          <Ionicons name={ICONS[layer]} size={13} color={on ? colors.bg : colors.textMuted} />
         )}
         <Text style={[typography.caption, { color: on ? colors.bg : colors.textMuted, fontSize: 11 }]}>
           {t(categoryKey(layer))}
@@ -416,8 +435,7 @@ function LayerSwitch({ active, onChange }: { active: 'top' | 'jacket'; onChange:
         borderColor: colors.border,
       }}
     >
-      {tab('top', 'shirt-outline')}
-      {tab('jacket', 'shirt-outline')}
+      {available.map(tab)}
     </View>
   );
 }

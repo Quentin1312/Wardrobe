@@ -319,6 +319,7 @@ const en: Dict = {
   'theme.light': 'Light',
   'theme.dark': 'Dark',
 
+  'category.mid': 'Jumper',
   'category.top': 'Top',
   'category.bottom': 'Bottom',
   'category.shoes': 'Shoes',
@@ -639,6 +640,7 @@ const fr: Dict = {
   'theme.light': 'Clair',
   'theme.dark': 'Sombre',
 
+  'category.mid': 'Pull',
   'category.top': 'Haut',
   'category.bottom': 'Bas',
   'category.shoes': 'Chaussures',

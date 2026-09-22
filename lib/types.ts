@@ -4,6 +4,7 @@ export type ClothingCategory =
   | 'top'
   | 'bottom'
   | 'shoes'
+  | 'mid'
   | 'jacket'
   | 'accessory';
 

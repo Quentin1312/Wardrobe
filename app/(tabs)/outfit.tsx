@@ -25,15 +25,15 @@ import { weatherContext } from '@/lib/weather';
 import { dateKey } from '@/lib/week';
 
 const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
-const OUTFIT_ORDER: ClothingCategory[] = ['top', 'jacket', 'bottom', 'shoes', 'accessory'];
-const OPTIONAL: ClothingCategory[] = ['jacket', 'accessory'];
-const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'jacket', 'shoes', 'accessory'];
+const OUTFIT_ORDER: ClothingCategory[] = ['top', 'mid', 'jacket', 'bottom', 'shoes', 'accessory'];
+const OPTIONAL: ClothingCategory[] = ['mid', 'jacket', 'accessory'];
+const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'mid', 'jacket', 'shoes', 'accessory'];
 
 type Buckets = Record<ClothingCategory, Clothing[]>;
 type Indices = Record<ClothingCategory, number>;
 
 function emptyBuckets(): Buckets {
-  return { top: [], bottom: [], shoes: [], jacket: [], accessory: [] };
+  return { top: [], mid: [], bottom: [], shoes: [], jacket: [], accessory: [] };
 }
 
 function indicesForIds(buckets: Buckets, ids: string[]): Indices {
@@ -45,7 +45,7 @@ function indicesForIds(buckets: Buckets, ids: string[]): Indices {
   return indices;
 }
 
-const INITIAL_INDICES: Indices = { top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: -1 };
+const INITIAL_INDICES: Indices = { top: 0, mid: -1, bottom: 0, shoes: 0, jacket: -1, accessory: -1 };
 const draftKey = (userId: string) => `wardrobe:day-draft:${userId}:${dateKey(new Date())}`;
 
 export default function OutfitDay() {
@@ -224,6 +224,7 @@ export default function OutfitDay() {
       top: pick('top'),
       bottom: pick('bottom'),
       shoes: pick('shoes'),
+      mid: pick('mid', true),
       jacket: pick('jacket', true),
     }));
     // None most of the time, one usually, two once in a while.
@@ -236,7 +237,7 @@ export default function OutfitDay() {
   function applyOutfitIds(ids: string[]) {
     setComposed(true);
     setIdx((previous) => {
-      const next: Indices = { ...previous, jacket: -1 };
+      const next: Indices = { ...previous, mid: -1, jacket: -1 };
       const wearable: ClothingCategory[] = OUTFIT_ORDER;
       for (const id of ids) {
         for (const category of wearable) {
@@ -351,6 +352,7 @@ export default function OutfitDay() {
     bottom: buckets.bottom.length,
     shoes: buckets.shoes.length,
     jacket: buckets.jacket.length,
+    mid: buckets.mid.length,
     accessory: buckets.accessory.length,
   };
   const tryOnItems = [

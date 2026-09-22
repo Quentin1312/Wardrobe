@@ -40,6 +40,7 @@ export function WeeklyPlanner({
     items.find((item) => item.category === category) ?? null;
   const counts: Record<ClothingCategory, number> = {
     top: itemFor('top') ? 1 : 0,
+    mid: itemFor('mid') ? 1 : 0,
     jacket: itemFor('jacket') ? 1 : 0,
     bottom: itemFor('bottom') ? 1 : 0,
     shoes: itemFor('shoes') ? 1 : 0,

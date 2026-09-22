@@ -199,8 +199,10 @@ ${taste}
 ${assignment}
 
 Chaque tenue DOIT contenir exactement un haut (top), un bas (bottom) et une paire
-de chaussures (shoes). Ajoute au maximum une veste (jacket) et un accessoire
-(accessory), uniquement s'ils ont un intérêt pour la météo ou le style. Une
+de chaussures (shoes). Ajoute au maximum une couche intermédiaire (mid : pull,
+sweat), une veste (jacket) et un accessoire (accessory), uniquement s'ils ont un
+intérêt pour la météo ou le style. En dessous de 12°C, superpose : haut + pull,
+et une veste si le temps l'exige. Une
 casquette, montre, sac ou ceinture peut compléter le look, sans être obligatoire.
 N'utilise QUE les id fournis ci-dessus, jamais deux fois le même id.
 La fiche détaillée prime sur la couleur automatique : « couleurs:jaune + anthracite »
@@ -262,10 +264,11 @@ ${outputShape}`;
       .filter((o) => {
         if (isWeek && !o.planned_for) return false;
         if (new Set(o.clothes_ids).size !== o.clothes_ids.length) return false;
-        const counts = (['top', 'bottom', 'shoes', 'jacket', 'accessory'] as const)
+        const counts = (['top', 'bottom', 'shoes', 'mid', 'jacket', 'accessory'] as const)
           .map((category) => o.clothes_ids.filter((id) => byCategory.get(id) === category).length);
         return counts[0] === 1 && counts[1] === 1 && counts[2] === 1 &&
-          counts[3] <= 1 && counts[4] <= 1 && counts.reduce((sum, n) => sum + n, 0) === o.clothes_ids.length;
+          counts[3] <= 1 && counts[4] <= 1 && counts[5] <= 1 &&
+          counts.reduce((sum, n) => sum + n, 0) === o.clothes_ids.length;
       });
 
     let uniqueSuggestions = isWeek

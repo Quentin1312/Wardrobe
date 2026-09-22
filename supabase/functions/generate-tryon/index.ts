@@ -32,7 +32,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type Category = 'top' | 'bottom' | 'shoes' | 'jacket' | 'accessory';
+type Category = 'top' | 'mid' | 'bottom' | 'shoes' | 'jacket' | 'accessory';
 
 interface ClothingRow {
   id: string;
@@ -68,12 +68,13 @@ const HEAD_WORDS =
 
 const CATEGORY_EN: Record<Category, string> = {
   jacket: 'jacket / outer layer',
+  mid: 'jumper / sweatshirt worn over the top',
   top: 'top',
   bottom: 'trousers / skirt / shorts',
   shoes: 'shoes',
   accessory: 'accessory worn on the head or face',
 };
-const ORDER: Category[] = ['jacket', 'top', 'bottom', 'shoes', 'accessory'];
+const ORDER: Category[] = ['jacket', 'mid', 'top', 'bottom', 'shoes', 'accessory'];
 
 /** Rough colour word for the brief, so the model has a textual anchor too. */
 function colorWord(hex: string | null): string | null {
@@ -119,6 +120,7 @@ function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
     'Virtual try-on. Image 1 is the person. The other images are reference photos of the exact garments to put on them:',
     ...garments.map((g, i) => describe(g, i + 2)),
     '',
+    'Layer them in the right order: top first, then the jumper over it, then the jacket on top — each visible the way it would really be worn.',
     'Dress the person from image 1 in exactly these garments and show a realistic full-body photo, head to feet, standing naturally, facing the camera, on a plain light studio background.',
     'GARMENTS MUST BE COPIED EXACTLY from their reference images: same colour and shade, same fabric texture, same pattern or print, same logos and text, same buttons, zips, pockets, collar, sleeve length, trouser length and cut. Only adapt them to the body with natural folds and fit.',
     'Do not add any garment, layer, accessory, jewellery or logo that is not listed. Do not recolour, simplify, restyle or "improve" any garment.',
@@ -335,7 +337,7 @@ Deno.serve(async (request) => {
     const rows = ((clothes ?? []) as ClothingRow[])
       .filter((c) => Boolean(c.category))
       .sort((a, b) => ORDER.indexOf(a.category!) - ORDER.indexOf(b.category!))
-      .slice(0, 6);
+      .slice(0, 7);
     if (rows.filter((r) => r.category !== 'accessory').length === 0) {
       return json({ error: 'no_compatible_garments' }, 400);
     }

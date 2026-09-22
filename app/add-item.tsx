@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { pickFromLibrary, takePhoto } from '@/components/PhotoPicker';
 import { GarmentStylingFields } from '@/components/GarmentStylingFields';
@@ -40,6 +40,8 @@ export default function AddItem() {
   const [garmentColors, setGarmentColors] = useState<GarmentColor[]>([]);
   const [colorsTouched, setColorsTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Alerts never show on the web build: errors go on the page.
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [check, setCheck] = useState<Check>({ status: 'idle' });
   const checkRun = useRef(0);
   const paletteEdited = useRef(false);
@@ -73,6 +75,7 @@ export default function AddItem() {
 
   async function onSave() {
     if (!session?.user || !asset || !category) return;
+    setSaveError(null);
     setSaving(true);
     try {
       const userId = session.user.id;
@@ -89,7 +92,7 @@ export default function AddItem() {
       studio.enqueue({ id: clothing.id, name: clothing.name ?? name, analyze: true });
       router.back();
     } catch (e: any) {
-      Alert.alert(t('add.failed'), e.message ?? t('add.failedMsg'));
+      setSaveError(e?.message ?? t('add.failedMsg'));
     } finally {
       setSaving(false);
     }
@@ -207,6 +210,10 @@ export default function AddItem() {
               ? 'Après l’ajout, la photo est analysée automatiquement pour les couleurs et les détails utiles au styliste. Ton nom et ta catégorie ne changent pas.'
               : 'After adding, the photo is analysed automatically for colours and stylist details. Your name and category stay unchanged.'}
           </Text>
+
+          {saveError ? (
+            <Text style={[typography.small, { color: colors.danger }]}>{saveError}</Text>
+          ) : null}
 
           <Button
             label={t('add.save')}

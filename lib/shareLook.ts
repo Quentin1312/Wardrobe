@@ -34,8 +34,8 @@ const CARD = '#FFFFFF';
 const ACCENT = '#635BFF';
 const LIME = '#C9FF3F';
 
-const ORDER: ClothingCategory[] = ['jacket', 'top', 'bottom', 'shoes', 'accessory'];
-const WEIGHT: Record<ClothingCategory, number> = { jacket: 1, top: 1, bottom: 1.15, shoes: 0.6, accessory: 0.55 };
+const ORDER: ClothingCategory[] = ['jacket', 'mid', 'top', 'bottom', 'shoes', 'accessory'];
+const WEIGHT: Record<ClothingCategory, number> = { jacket: 1, mid: 1, top: 1, bottom: 1.15, shoes: 0.6, accessory: 0.55 };
 
 export function orderLook(items: Clothing[]): Clothing[] {
   const rank = (c: Clothing) => (c.category ? ORDER.indexOf(c.category) : ORDER.length);

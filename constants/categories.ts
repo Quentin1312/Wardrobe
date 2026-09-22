@@ -6,6 +6,7 @@ export const CATEGORIES: {
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   { key: 'top', icon: 'shirt-outline' },
+  { key: 'mid', icon: 'shirt' },
   { key: 'bottom', icon: 'walk-outline' },
   { key: 'shoes', icon: 'footsteps-outline' },
   { key: 'jacket', icon: 'body-outline' },
