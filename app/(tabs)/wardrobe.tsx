@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { WashCycle } from '@/components/WashCycle';
 import { CATEGORIES, categoryKey } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
+import { useStudioQueue } from '@/context/StudioQueueProvider';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -24,6 +25,7 @@ type Filter = ClothingCategory | 'all' | 'fav' | 'dirty' | 'forgotten';
 const colorAttempted = new Set<string>();
 
 export default function Wardrobe() {
+  const studio = useStudioQueue();
   const { colors } = useTheme();
   const { session } = useAuth();
   const { t } = useLocale();
@@ -86,6 +88,16 @@ export default function Wardrobe() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // The studio queue rewrites photos in the background: refresh once it is done.
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (studio.pending > 0) wasBusy.current = true;
+    else if (wasBusy.current) {
+      wasBusy.current = false;
+      load();
+    }
+  }, [studio.pending, load]);
+
   const usedCategories = useMemo(
     () => CATEGORIES.filter((c) => items.some((i) => i.category === c.key)),
     [items]
@@ -94,6 +106,9 @@ export default function Wardrobe() {
   const dirtyCount = items.filter((i) => i.dirty).length;
   const forgotten = useMemo(() => items.filter((i) => isForgotten(i, wear.get(i.id))), [items, wear]);
   const pendingCleanCount = items.filter((i) => !i.photo_clean_url).length;
+  // Pieces that never went through the AI studio (their photo is the raw shot
+  // or a plain cut-out): they can all be polished in the background.
+  const rawPhotos = items.filter((i) => !/-studio-\d+\.webp/.test(i.photo_clean_url ?? ''));
 
   const shown =
     filter === 'all'
@@ -209,6 +224,34 @@ export default function Wardrobe() {
                   <Ionicons name="add" size={27} color={colors.energyText} />
                 </Pressable>
               </View>
+
+              {rawPhotos.length > 0 ? (
+                <Pressable
+                  disabled={studio.pending > 0}
+                  onPress={() => rawPhotos.forEach((piece) => studio.enqueue({ id: piece.id, name: piece.name }))}
+                  style={({ pressed }) => ({
+                    marginTop: spacing.md,
+                    minHeight: 48,
+                    borderRadius: radius.md,
+                    borderWidth: 1,
+                    borderColor: colors.borderStrong,
+                    backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    opacity: studio.pending > 0 ? 0.6 : 1,
+                  })}
+                >
+                  <Ionicons name="color-wand-outline" size={18} color={colors.accent} />
+                  <Text style={[typography.bodyStrong, { color: colors.text, textAlign: 'center' }]}>
+                    {studio.pending > 0
+                      ? t('studio.badgeQueue', { count: studio.pending })
+                      : t('studio.polishAll', { count: rawPhotos.length })}
+                  </Text>
+                </Pressable>
+              ) : null}
 
               {pendingCleanCount > 0 || cleaning || cleanMessage ? (
                 <Pressable

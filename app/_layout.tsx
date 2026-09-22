@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { StudioQueueProvider } from '@/context/StudioQueueProvider';
 import { LocaleProvider, useLocale } from '@/context/LocaleContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { CompanionProvider, useCompanion } from '@/context/CompanionProvider';
@@ -117,7 +118,9 @@ export default function RootLayout() {
         <LocaleProvider>
           <CompanionProvider>
           <AuthProvider>
-            <RootNavigator />
+            <StudioQueueProvider>
+              <RootNavigator />
+            </StudioQueueProvider>
           </AuthProvider>
           </CompanionProvider>
         </LocaleProvider>

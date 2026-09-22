@@ -12,13 +12,13 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { addClothing, deleteClothing, removeBackground } from '@/lib/clothes';
-import type { Clothing, ClothingCategory } from '@/lib/types';
+import { addClothing } from '@/lib/clothes';
+import type { ClothingCategory } from '@/lib/types';
 import { uploadImage } from '@/lib/upload';
 import { extractGarmentPalette } from '@/lib/color';
 import { colorsFromHexes, primaryColorHex, writeGarmentMeta, type GarmentColor } from '@/lib/garmentMeta';
-import { optimizeLegacyCleanPhotos } from '@/lib/images';
-import { checkCutout, checkPhoto, type CutoutIssue, type PhotoIssue } from '@/lib/photoQuality';
+import { useStudioQueue } from '@/context/StudioQueueProvider';
+import { checkPhoto, type PhotoIssue } from '@/lib/photoQuality';
 
 type Check = { status: 'idle' } | { status: 'checking' } | { status: 'done'; issues: PhotoIssue[] };
 
@@ -40,12 +40,9 @@ export default function AddItem() {
   const [garmentColors, setGarmentColors] = useState<GarmentColor[]>([]);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
-  const [processing, setProcessing] = useState(false);
   const [check, setCheck] = useState<Check>({ status: 'idle' });
-  // A saved piece whose cut-out came back messy, waiting for the user's call.
-  const [cutout, setCutout] = useState<{ clothing: Clothing; url: string; issues: CutoutIssue[] } | null>(null);
-  const [keeping, setKeeping] = useState(false);
   const checkRun = useRef(0);
+  const studio = useStudioQueue();
 
   /** New photo: check it right away, on the device, for free. */
   function onPicked(a: ImagePickerAsset | null) {
@@ -81,50 +78,15 @@ export default function AddItem() {
       const clothing = await addClothing({ userId, photoUrl: url, category, name,
         dominantColor: primaryColorHex(garmentColors),
         styleTags: writeGarmentMeta([], garmentColors, description) });
-      // Remove the background so the piece renders cleanly on the mannequin.
-      setProcessing(true);
-      const clean = await removeBackground(clothing.id); // best-effort; item is saved regardless
-      if (clean.url) {
-        const issues = await checkCutout(clean.url);
-        if (issues.length > 0) {
-          setCutout({ clothing, url: clean.url, issues });
-          return;
-        }
-        await optimizeLegacyCleanPhotos([{ ...clothing, photo_clean_url: clean.url }]);
-      }
+      // Cut-out and studio render happen in the background: adding a piece
+      // should take a few seconds, not a minute.
+      studio.enqueue({ id: clothing.id, name: clothing.name ?? name });
       router.back();
     } catch (e: any) {
       Alert.alert(t('add.failed'), e.message ?? t('add.failedMsg'));
     } finally {
       setSaving(false);
-      setProcessing(false);
     }
-  }
-
-  /** Messy cut-out, kept anyway: finish the usual pipeline and leave. */
-  async function keepCutout() {
-    if (!cutout) return;
-    setKeeping(true);
-    try {
-      await optimizeLegacyCleanPhotos([{ ...cutout.clothing, photo_clean_url: cutout.url }]);
-    } catch {
-      // the original cut-out is still there
-    }
-    router.back();
-  }
-
-  /** Messy cut-out: drop the piece and start over with a better photo. */
-  async function redoFromCutout() {
-    if (!cutout) return;
-    try {
-      await deleteClothing(cutout.clothing.id);
-    } catch {
-      // worst case the piece stays in the wardrobe and can be deleted there
-    }
-    setCutout(null);
-    setAsset(null);
-    setCheck({ status: 'idle' });
-    await retake();
   }
 
   return (
@@ -147,35 +109,6 @@ export default function AddItem() {
         </Pressable>
       </View>
 
-      {cutout ? (
-        <ScrollView contentContainerStyle={{ width: '100%', maxWidth: 620, alignSelf: 'center', padding: spacing.screen, gap: spacing.lg }}>
-          <View
-            style={{
-              aspectRatio: 1,
-              borderRadius: radius.xl,
-              backgroundColor: '#EFEEE9',
-              padding: spacing.lg,
-              overflow: 'hidden',
-            }}
-          >
-            <Image source={{ uri: cutout.url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-          </View>
-          <View style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
-              <Text style={[typography.h3, { color: colors.text }]}>{t('photo.cutoutTitle')}</Text>
-            </View>
-            {cutout.issues.map((issue) => (
-              <Text key={issue} style={[typography.body, { color: colors.text }]}>
-                {t(`photo.cutout.${issue}`)}
-              </Text>
-            ))}
-            <Text style={[typography.small, { color: colors.textMuted }]}>{t('photo.cutoutHint')}</Text>
-          </View>
-          <Button label={t('photo.retake')} onPress={redoFromCutout} disabled={keeping} />
-          <Button label={t('photo.keep')} variant="ghost" onPress={keepCutout} loading={keeping} />
-        </ScrollView>
-      ) : (
         <ScrollView contentContainerStyle={{ width: '100%', maxWidth: 620, alignSelf: 'center', padding: spacing.screen, gap: spacing.lg }}>
           <Pressable
             onPress={retake}
@@ -261,13 +194,12 @@ export default function AddItem() {
             description={description} onDescription={setDescription} />
 
           <Button
-            label={processing ? t('add.processing') : t('add.save')}
+            label={t('add.save')}
             onPress={onSave}
             loading={saving}
             disabled={!asset || !category}
           />
         </ScrollView>
-      )}
     </SafeAreaView>
   );
 }
