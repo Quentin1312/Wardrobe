@@ -426,6 +426,7 @@ function LayerSwitch({
         onPress={() => onChange(layer)}
         accessibilityRole="tab"
         accessibilityState={{ selected: on }}
+        accessibilityLabel={t(categoryKey(layer))}
         hitSlop={4}
         style={{
           minHeight: 30,
