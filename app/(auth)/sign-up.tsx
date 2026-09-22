@@ -1,7 +1,6 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -14,6 +13,7 @@ import { spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
+import { supabaseConfigured } from '@/lib/supabase';
 
 export default function SignUp() {
   const { colors } = useTheme();
@@ -22,24 +22,28 @@ export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Alerts are invisible on the web build: say it on the page instead.
+  const [message, setMessage] = useState<string | null>(
+    supabaseConfigured ? null : t('auth.notConfigured')
+  );
 
   async function onSubmit() {
     if (!email || !password) {
-      Alert.alert(t('auth.missingInfo'), t('auth.enterCredentials'));
+      setMessage(t('auth.enterCredentials'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert(t('auth.weakPassword'), t('auth.weakPasswordMsg'));
+      setMessage(t('auth.weakPasswordMsg'));
       return;
     }
     setLoading(true);
     const { error } = await signUp(email.trim(), password);
     setLoading(false);
     if (error) {
-      Alert.alert(t('auth.signUpFailed'), error);
+      setMessage(error);
       return;
     }
-    Alert.alert(t('auth.almostThere'), t('auth.confirmEmailMsg'));
+    setMessage(t('auth.confirmEmailMsg'));
   }
 
   return (
@@ -76,6 +80,9 @@ export default function SignUp() {
               secureTextEntry
               placeholder="••••••••"
             />
+            {message ? (
+              <Text style={[typography.small, { color: colors.danger }]}>{message}</Text>
+            ) : null}
             <Button label={t('auth.signUp')} onPress={onSubmit} loading={loading} />
           </View>
 

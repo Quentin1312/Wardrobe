@@ -15,6 +15,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Keep public screens renderable in development even before .env is copied.
 // Auth/data calls will still fail clearly until real values are provided.
+/** False when the build was made without EXPO_PUBLIC_SUPABASE_* : nothing can work. */
+export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
 export const supabase = createClient(
   supabaseUrl ?? 'https://missing-config.supabase.co',
   supabaseAnonKey ?? 'missing-config',

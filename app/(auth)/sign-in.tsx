@@ -1,7 +1,6 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -14,6 +13,7 @@ import { spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
+import { supabaseConfigured } from '@/lib/supabase';
 
 export default function SignIn() {
   const { colors } = useTheme();
@@ -22,16 +22,21 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Alerts are invisible on the web build: say it on the page instead.
+  const [message, setMessage] = useState<string | null>(
+    supabaseConfigured ? null : t('auth.notConfigured')
+  );
 
   async function onSubmit() {
     if (!email || !password) {
-      Alert.alert(t('auth.missingInfo'), t('auth.enterCredentials'));
+      setMessage(t('auth.enterCredentials'));
       return;
     }
+    setMessage(null);
     setLoading(true);
     const { error } = await signIn(email.trim(), password);
     setLoading(false);
-    if (error) Alert.alert(t('auth.signInFailed'), error);
+    if (error) setMessage(error);
   }
 
   return (
@@ -66,6 +71,9 @@ export default function SignIn() {
               secureTextEntry
               placeholder="••••••••"
             />
+            {message ? (
+              <Text style={[typography.small, { color: colors.danger }]}>{message}</Text>
+            ) : null}
             <Button label={t('auth.signIn')} onPress={onSubmit} loading={loading} />
           </View>
 
