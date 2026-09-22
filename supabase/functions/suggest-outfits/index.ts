@@ -204,12 +204,15 @@ Chaque tenue DOIT contenir exactement un haut (top), un bas (bottom) et une pair
 de chaussures (shoes). Ajoute au maximum une couche intermédiaire (mid : pull,
 sweat), une veste (jacket) et un accessoire (accessory), uniquement s'ils ont un
 intérêt pour la météo ou le style.
-Règle des couches, à suivre strictement d'après la température la plus HAUTE de
-la journée : 22°C et plus, ni pull ni veste ; 18 à 21°C, pas de pull, veste
-légère seulement le soir ou sous la pluie ; 12 à 17°C, un pull OU une veste,
-rarement les deux ; en dessous de 12°C, haut + pull, et une veste en dessous de
-8°C, sous la pluie ou par grand vent. Si l'écart entre le matin et l'après-midi
-dépasse 6°C, choisis une couche qui s'enlève facilement. Une
+Règle des couches, d'après la température la plus HAUTE de la journée : 22°C et
+plus, ni pull ni veste ; 18 à 21°C, pas de pull, veste légère seulement le soir
+ou sous la pluie ; 12 à 17°C, un pull OU une veste, rarement les deux ; en
+dessous de 12°C, haut + pull, et une veste en dessous de 8°C, sous la pluie ou
+par grand vent.
+EXCEPTION matin froid : si le minimum de la journée est inférieur ou égal à 14°C,
+ajoute quand même UNE couche qui s'enlève (veste de préférence, sinon pull), même
+si l'après-midi est chaud, et dis clairement dans la justification qu'elle est
+pour le matin et qu'on peut la retirer l'après-midi. Une
 casquette, montre, sac ou ceinture peut compléter le look, sans être obligatoire.
 N'utilise QUE les id fournis ci-dessus, jamais deux fois le même id.
 La fiche détaillée prime sur la couleur automatique : « couleurs:jaune + anthracite »

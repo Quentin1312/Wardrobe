@@ -28,6 +28,8 @@ const REQUIRED: ClothingCategory[] = ['top', 'bottom', 'shoes'];
 const OUTFIT_ORDER: ClothingCategory[] = ['top', 'mid', 'jacket', 'bottom', 'shoes', 'accessory'];
 const OPTIONAL: ClothingCategory[] = ['mid', 'jacket', 'accessory'];
 const TRYON_CATEGORIES: ClothingCategory[] = ['bottom', 'top', 'mid', 'jacket', 'shoes', 'accessory'];
+/** Worn once, washed: shoes, jackets and accessories don't go to the basket. */
+const WASHABLE: ClothingCategory[] = ['top', 'mid', 'bottom'];
 
 type Buckets = Record<ClothingCategory, Clothing[]>;
 type Indices = Record<ClothingCategory, number>;
@@ -149,6 +151,12 @@ export default function OutfitDay() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const hasRequired = REQUIRED.every((category) => buckets[category].length > 0);
+
+  // A chilly morning before a mild afternoon: keep the layer on, take it off later.
+  const layerTip =
+    todayForecast && todayForecast.min <= 14 && todayForecast.max - todayForecast.min >= 6
+      ? t('outfitDay.layerTip', { morning: todayForecast.min, day: todayForecast.max })
+      : null;
 
   const accessories = useMemo(
     () =>
@@ -338,7 +346,9 @@ export default function OutfitDay() {
     // Worn today: quietly flag the pieces in the wardrobe. They only reach the
     // laundry basket view — no basket animation here, this is a validation.
     try {
-      await markOutfitDirty(worn.map((piece) => piece.id));
+      await markOutfitDirty(
+        worn.filter((piece) => piece.category && WASHABLE.includes(piece.category)).map((piece) => piece.id)
+      );
     } catch {
       // the look is saved either way
     }
@@ -436,13 +446,30 @@ export default function OutfitDay() {
           {rationale && !locked ? (
             <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md,
               borderRadius: radius.md, backgroundColor: colors.surface }}>
-              <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
+              <Ionicons name="color-wand-outline" size={18} color={colors.accent} />
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={[typography.eyebrow, { color: colors.accent }]}>
                   {locale === 'fr' ? 'POURQUOI CE LOOK' : 'WHY THIS LOOK'}
                 </Text>
                 <Text style={[typography.small, { color: colors.text }]}>{rationale}</Text>
               </View>
+            </View>
+          ) : null}
+
+          {layerTip ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: spacing.sm,
+                padding: spacing.md,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }}
+            >
+              <Ionicons name="thermometer-outline" size={18} color={colors.accent} />
+              <Text style={[typography.small, { color: colors.text, flex: 1 }]}>{layerTip}</Text>
             </View>
           ) : null}
 
