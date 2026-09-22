@@ -283,6 +283,7 @@ function UpperRow({
 }) {
   const { t } = useLocale();
   const [frame, setFrame] = useState<Frame | null>(null);
+  const [headerH, setHeaderH] = useState(UPPER_INSET);
   const activeEntry = pieces.find((piece) => piece.layer === active) ?? pieces[0] ?? null;
   const others = pieces.filter((piece) => piece !== activeEntry);
   const nameOf = (entry: { layer: Layer; item: Clothing }) => entry.item.name ?? t(categoryKey(entry.layer));
@@ -304,7 +305,7 @@ function UpperRow({
                 frame={frame}
                 widthRatio={backRatio}
                 offsetX={frame.w * (spread[i] ?? -LAYER_SHIFT)}
-                insetTop={UPPER_INSET}
+                insetTop={headerH}
                 dim
                 onPress={locked ? undefined : () => onSetActive(entry.layer)}
               />
@@ -315,22 +316,39 @@ function UpperRow({
                 item={activeEntry.item}
                 frame={frame}
                 widthRatio={frontRatio}
-                insetTop={UPPER_INSET}
+                insetTop={headerH}
               />
             ) : (
-              <FittedGarment key="empty" item={null} frame={frame} widthRatio={WIDTH.top} insetTop={UPPER_INSET} />
+              <FittedGarment key="empty" item={null} frame={frame} widthRatio={WIDTH.top} insetTop={headerH} />
             ),
           ]
         : null}
 
-      <Label
-        eyebrow={t(categoryKey(active))}
-        name={activeEntry && activeEntry.layer === active ? nameOf(activeEntry) : t('outfitDay.none')}
-        extra={others.length > 0 ? `+ ${others.map(nameOf).join(' + ')}` : null}
-      />
-      {available.length > 1 && !locked ? (
-        <LayerSwitch active={active} available={available} onChange={onSetActive} />
-      ) : null}
+      <View
+        onLayout={(e: LayoutChangeEvent) => setHeaderH(Math.ceil(e.nativeEvent.layout.height))}
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.sm,
+        }}
+      >
+        <Label
+          inline
+          eyebrow={t(categoryKey(active))}
+          name={activeEntry && activeEntry.layer === active ? nameOf(activeEntry) : t('outfitDay.none')}
+          extra={others.length > 0 ? `+ ${others.map(nameOf).join(' + ')}` : null}
+        />
+        {available.length > 1 && !locked ? (
+          <LayerSwitch active={active} available={available} onChange={onSetActive} />
+        ) : null}
+      </View>
       {overlay}
       {locked ? null : (
         <>
@@ -348,6 +366,7 @@ function Label({
   extra,
   narrow,
   lines = 2,
+  inline,
 }: {
   eyebrow: string;
   name: string | null;
@@ -355,10 +374,19 @@ function Label({
   /** Beside a centred garment: keep clear of it. */
   narrow?: boolean;
   lines?: number;
+  /** In a flex row rather than floating over the garments. */
+  inline?: boolean;
 }) {
   const { colors } = useTheme();
   return (
-    <View style={{ position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: narrow ? '28%' : '46%' }} pointerEvents="none">
+    <View
+      pointerEvents="none"
+      style={
+        inline
+          ? { flex: 1, minWidth: 0 }
+          : { position: 'absolute', left: spacing.md, top: spacing.sm, maxWidth: narrow ? '28%' : '46%' }
+      }
+    >
       <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{eyebrow}</Text>
       {name ? (
         <Text numberOfLines={lines} style={[typography.bodyStrong, { color: colors.text, fontSize: 13, lineHeight: 17 }]}>
@@ -401,7 +429,7 @@ function LayerSwitch({
         hitSlop={4}
         style={{
           minHeight: 30,
-          paddingHorizontal: 9,
+          paddingHorizontal: on ? 9 : 7,
           borderRadius: radius.full,
           flexDirection: 'row',
           alignItems: 'center',
@@ -414,18 +442,15 @@ function LayerSwitch({
         ) : (
           <Ionicons name={ICONS[layer]} size={13} color={on ? colors.bg : colors.textMuted} />
         )}
-        <Text style={[typography.caption, { color: on ? colors.bg : colors.textMuted, fontSize: 11 }]}>
-          {t(categoryKey(layer))}
-        </Text>
+        {on ? (
+          <Text style={[typography.caption, { color: colors.bg, fontSize: 11 }]}>{t(categoryKey(layer))}</Text>
+        ) : null}
       </Pressable>
     );
   };
   return (
     <View
       style={{
-        position: 'absolute',
-        right: spacing.sm,
-        top: spacing.sm,
         flexDirection: 'row',
         padding: 3,
         gap: 2,
