@@ -16,7 +16,7 @@ import { useWeather } from '@/hooks/useWeather';
 import { OutfitConfirmed } from '@/components/OutfitConfirmed';
 import { ShareLookButton } from '@/components/ShareLookButton';
 import { fetchClothes, markOutfitDirty, setClothingDirty } from '@/lib/clothes';
-import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked, validLook } from '@/lib/outfits';
+import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked, validLook, type Occasion } from '@/lib/outfits';
 import { generateTryOn, type TryOnResponse } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { weatherContext } from '@/lib/weather';
@@ -63,6 +63,7 @@ export default function OutfitDay() {
   const [saved, setSaved] = useState(false);
   const [savedOutfitId, setSavedOutfitId] = useState<string | null>(null);
   const [tryOnOpen, setTryOnOpen] = useState(false);
+  const [occasion, setOccasion] = useState<Occasion>('daily');
   const [styling, setStyling] = useState(false);
   const [styleMsg, setStyleMsg] = useState<string | null>(null);
   const [styled, setStyled] = useState(false);
@@ -243,7 +244,7 @@ export default function OutfitDay() {
     setStyling(true);
     try {
       const w = weather ? { temp: weather.temp, condition: weather.condition } : null;
-      const { outfits, error } = await generateOutfits(w);
+      const { outfits, error } = await generateOutfits(w, occasion);
       if (error === 'not_enough_items') {
         setStyleMsg(t('today.tooFewBody'));
       } else if (error === 'empty' || error === 'no_valid_outfit') {
@@ -463,6 +464,8 @@ export default function OutfitDay() {
           ) : null}
 
           <View style={{ gap: spacing.sm }}>
+            <OccasionPicker value={occasion} onChange={setOccasion} />
+
             {/* Primary: let the stylist decide, based on the weather */}
             <Pressable
               onPress={styleMe}
@@ -588,5 +591,49 @@ export default function OutfitDay() {
         }}
       />
     </SafeAreaView>
+  );
+}
+
+/** What the look is for: sets the tone the stylist should aim at. */
+function OccasionPicker({ value, onChange }: { value: Occasion; onChange: (next: Occasion) => void }) {
+  const { colors } = useTheme();
+  const { t } = useLocale();
+  const options: { key: Occasion; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: 'daily', icon: 'sunny-outline' },
+    { key: 'work', icon: 'briefcase-outline' },
+    { key: 'party', icon: 'wine-outline' },
+    { key: 'sport', icon: 'walk-outline' },
+  ];
+  return (
+    <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+      {options.map((option) => {
+        const on = value === option.key;
+        return (
+          <Pressable
+            key={option.key}
+            onPress={() => onChange(option.key)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            style={({ pressed }) => ({
+              flex: 1,
+              minHeight: 42,
+              borderRadius: radius.full,
+              borderWidth: 1,
+              borderColor: on ? colors.primary : colors.border,
+              backgroundColor: on ? colors.primary : pressed ? colors.surfaceAlt : colors.surface,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+            })}
+          >
+            <Ionicons name={option.icon} size={14} color={on ? colors.primaryText : colors.textMuted} />
+            <Text style={[typography.caption, { color: on ? colors.primaryText : colors.textMuted }]}>
+              {t(`occasion.${option.key}`)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }

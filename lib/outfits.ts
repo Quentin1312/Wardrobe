@@ -18,13 +18,16 @@ export interface WeekPlanDayInput {
   weather: { temp: number; condition: string } | null;
 }
 
+/** What the day calls for; the stylist dresses accordingly. */
+export type Occasion = 'daily' | 'work' | 'party' | 'sport';
+
 /** Calls the Groq-powered edge function to generate fresh outfit suggestions. */
-export async function generateOutfits(weather: {
-  temp: number;
-  condition: string;
-} | null): Promise<{ outfits: SuggestedOutfit[]; error?: string }> {
+export async function generateOutfits(
+  weather: { temp: number; condition: string } | null,
+  occasion: Occasion = 'daily'
+): Promise<{ outfits: SuggestedOutfit[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke('suggest-outfits', {
-    body: { weather, count: 3 },
+    body: { weather, count: 3, occasion },
   });
 
   // On a non-2xx, supabase-js hides the function's JSON body inside error.context.

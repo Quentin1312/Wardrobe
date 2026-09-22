@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) return json({ error: 'Unauthorized' }, 401);
     const userId = userData.user.id;
 
-    const { weather, count = 3, mode = 'day', days = [] } = await req.json().catch(() => ({}));
+    const { weather, count = 3, mode = 'day', days = [], occasion = 'daily' } = await req.json().catch(() => ({}));
 
     const { data: clothes, error: clothesErr } = await supabase
       .from('clothes')
@@ -174,6 +174,14 @@ Deno.serve(async (req) => {
       ? `\nGoûts de l'utilisateur (à respecter) :\n${tasteParts.join('\n')}\nInspire-toi des associations aimées (couleurs, styles) sans les recopier à l'identique, et évite ce qui ressemble aux tenues refusées.\n`
       : '';
 
+    // What the look is for, in the stylist's own words.
+    const OCCASIONS: Record<string, string> = {
+      work: "Occasion : le boulot. Reste sobre et net, rien de trop décontracté ni de trop voyant.",
+      party: "Occasion : une soirée. Monte d'un cran : pièces plus fortes, plus habillées, un contraste qui marque.",
+      sport: "Occasion : du sport ou une journée active. Privilégie le confort, les matières souples et les baskets.",
+    };
+    const occasionLine = OCCASIONS[String(occasion)] ?? '';
+
     const assignment = isWeek
       ? `Planifie exactement une tenue pour chacun de ces jours :\n${weekDays
           .map((day) => `- ${day.date} : ${day.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : 'météo inconnue'}`)
@@ -186,6 +194,7 @@ Deno.serve(async (req) => {
 
     const prompt = `Tu es un styliste. Voici la garde-robe d'un utilisateur :
 ${catalog}
+${occasionLine}
 ${taste}
 ${assignment}
 
