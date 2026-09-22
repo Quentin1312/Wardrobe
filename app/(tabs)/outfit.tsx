@@ -13,6 +13,7 @@ import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
 import { OutfitConfirmed } from '@/components/OutfitConfirmed';
+import { ShareLookButton } from '@/components/ShareLookButton';
 import { fetchClothes, markOutfitDirty, setClothingDirty } from '@/lib/clothes';
 import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked } from '@/lib/outfits';
 import { generateTryOn } from '@/lib/tryon';
@@ -331,6 +332,7 @@ export default function OutfitDay() {
                 <Ionicons name="lock-closed" size={16} color={colors.success} />
                 <Text style={[typography.bodyStrong, { color: colors.success }]}>{t('outfitDay.wornToday')}</Text>
               </View>
+              <ShareLookButton items={locked} weather={weather} />
               <Pressable
                 onPress={unlock}
                 hitSlop={8}
@@ -469,6 +471,7 @@ export default function OutfitDay() {
       <OutfitConfirmed
         visible={showConfirm}
         items={confirmedItems}
+        weather={weather}
         onClose={() => setShowConfirm(false)}
       />
 

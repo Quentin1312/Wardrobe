@@ -9,6 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useCompanion } from '@/context/CompanionProvider';
 import { CompanionAvatar } from '@/components/companion/CompanionAvatar';
 import { SpeechBubble } from '@/components/companion/SpeechBubble';
+import { ShareLookButton } from '@/components/ShareLookButton';
 import { companionReaction } from '@/lib/companion';
 import type { Clothing } from '@/lib/types';
 
@@ -16,10 +17,12 @@ import type { Clothing } from '@/lib/types';
 export function OutfitConfirmed({
   visible,
   items,
+  weather = null,
   onClose,
 }: {
   visible: boolean;
   items: Clothing[];
+  weather?: { temp: number; condition: string; main: string } | null;
   onClose: () => void;
 }) {
   const { colors, dark } = useTheme();
@@ -174,7 +177,8 @@ export function OutfitConfirmed({
             </Text>
           </Animated.View>
 
-          <Animated.View style={{ opacity: text, alignSelf: 'stretch', paddingHorizontal: spacing.lg }}>
+          <Animated.View style={{ opacity: text, alignSelf: 'stretch', paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+            {visible ? <ShareLookButton items={items} weather={weather} variant="pill" /> : null}
             <Pressable
               onPress={onClose}
               style={({ pressed }) => ({
