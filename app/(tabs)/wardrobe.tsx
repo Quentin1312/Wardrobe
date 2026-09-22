@@ -11,8 +11,9 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { cleanMissingBackgrounds, fetchClothes, setClothingColor, washAll } from '@/lib/clothes';
-import { colorName, extractDominantColor } from '@/lib/color';
+import { cleanMissingBackgrounds, fetchClothes, updateClothingStyling, washAll } from '@/lib/clothes';
+import { colorName, extractGarmentPalette } from '@/lib/color';
+import { colorsFromHexes, primaryColorHex, readGarmentMeta, writeGarmentMeta } from '@/lib/garmentMeta';
 import { clothingImageUri, optimizeLegacyCleanPhotos } from '@/lib/images';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { FORGOTTEN_DAYS, fetchWearStats, isForgotten, wornLabel, type WearStat } from '@/lib/wear';
@@ -39,16 +40,18 @@ export default function Wardrobe() {
   const [cleanProgress, setCleanProgress] = useState({ done: 0, total: 0 });
   const [cleanMessage, setCleanMessage] = useState<string | null>(null);
 
-  /** One-off: read the colour of pieces added before colour detection existed. */
+  /** One-off palette upgrade for legacy pieces; user-edited palettes are left intact. */
   async function backfillColors(list: Clothing[]) {
     for (const piece of list) {
-      if (piece.dominant_color || colorAttempted.has(piece.id)) continue;
+      if ((piece.style_tags ?? []).some((tag) => tag.startsWith('couleurs:')) || colorAttempted.has(piece.id)) continue;
       colorAttempted.add(piece.id);
-      const hex = await extractDominantColor(piece.photo_url, piece.id);
-      if (!hex) continue;
+      const colors = colorsFromHexes(await extractGarmentPalette(piece.photo_url, piece.id));
+      if (!colors.length) continue;
+      const values = { category: piece.category, dominant_color: primaryColorHex(colors),
+        style_tags: writeGarmentMeta(piece.style_tags, colors, readGarmentMeta(piece).description) };
       try {
-        await setClothingColor(piece.id, hex);
-        setItems((prev) => prev.map((p) => (p.id === piece.id ? { ...p, dominant_color: hex } : p)));
+        await updateClothingStyling(piece.id, values);
+        setItems((prev) => prev.map((p) => (p.id === piece.id ? { ...p, ...values } : p)));
       } catch {
         // stays uncoloured; the stylist copes without it
       }
@@ -487,7 +490,9 @@ function ClothingCard({
           ) : null}
           <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, flexShrink: 1 }]}>
             {t(categoryKey(item.category))}
-            {item.dominant_color ? ` · ${colorName(item.dominant_color, locale) ?? ''}` : ''}
+            {readGarmentMeta(item).colors.length
+              ? ` · ${readGarmentMeta(item).colors.join(' + ')}`
+              : item.dominant_color ? ` · ${colorName(item.dominant_color, locale) ?? ''}` : ''}
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
         (c) =>
           `- id:${c.id} | ${c.name ? `nom:"${c.name}" | ` : ''}catégorie:${c.category ?? '?'} | couleur:${
             colorFr(c.dominant_color) ?? '?'
-          } | tags:${(c.style_tags ?? []).join(',') || '-'} | portée:${wornText(c.id)}`
+          } | fiche détaillée:${(c.style_tags ?? []).join(' ; ') || '-'} | portée:${wornText(c.id)}`
       )
       .join('\n');
 
@@ -189,12 +189,19 @@ ${catalog}
 ${taste}
 ${assignment}
 
-Chaque tenue doit
-combiner idéalement un haut + un bas + des chaussures, plus une veste si la
-météo ou le style le demandent. Ajoute aussi un accessoire dès qu'il apporte
-quelque chose à la tenue (casquette, montre, sac, ceinture) : n'en mets pas à
-tout prix, mais ne l'oublie pas. N'utilise QUE les id fournis ci-dessus.
-Vérifie la compatibilité des couleurs et la cohérence de style.
+Chaque tenue DOIT contenir exactement un haut (top), un bas (bottom) et une paire
+de chaussures (shoes). Ajoute au maximum une veste (jacket) et un accessoire
+(accessory), uniquement s'ils ont un intérêt pour la météo ou le style. Une
+casquette, montre, sac ou ceinture peut compléter le look, sans être obligatoire.
+N'utilise QUE les id fournis ci-dessus, jamais deux fois le même id.
+La fiche détaillée prime sur la couleur automatique : « couleurs:jaune + anthracite »
+signifie que les DEUX couleurs sont visibles, pas seulement l'anthracite. Tiens compte
+de la matière, de la coupe, du motif, du niveau de formalité et des détails fournis
+dans « description: ». N'invente pas les caractéristiques absentes. Vérifie la
+compatibilité des couleurs, la silhouette, l'occasion et la météo. Évite les
+vêtements trop chauds par forte chaleur et les tenues légères par temps froid.
+Explique en une phrase concrète pourquoi les pièces vont ensemble et sont
+adaptées au temps ; ne donne pas une justification générique.
 Fais tourner la garde-robe : évite les pièces portées il y a moins de 3 jours
 quand une alternative cohérente existe, et remets en avant les pièces oubliées
 (portée il y a 30 j ou plus, ou jamais) quand elles vont avec la tenue.
@@ -210,7 +217,7 @@ ${outputShape}`;
       },
       body: JSON.stringify({
         model: GROQ_MODEL,
-        temperature: 0.7,
+        temperature: 0.35,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: 'Tu réponds uniquement en JSON valide.' },
@@ -233,16 +240,23 @@ ${outputShape}`;
       return json({ error: 'Réponse IA illisible', outfits: [] }, 502);
     }
 
-    const validIds = new Set(items.map((i) => i.id));
+    const byCategory = new Map(items.map((i) => [i.id, i.category]));
     const requestedDates = new Set(weekDays.map((day) => day.date));
     const suggestions = (parsed.outfits ?? [])
       // Keep only outfits whose ids all exist in the wardrobe.
       .map((o) => ({
         planned_for: isWeek && requestedDates.has(o.planned_for ?? '') ? o.planned_for! : null,
-        clothes_ids: (o.clothes_ids ?? []).filter((id) => validIds.has(id)),
+        clothes_ids: (o.clothes_ids ?? []).filter((id) => byCategory.has(id)),
         rationale: o.rationale ?? '',
       }))
-      .filter((o) => o.clothes_ids.length >= 2 && (!isWeek || o.planned_for));
+      .filter((o) => {
+        if (isWeek && !o.planned_for) return false;
+        if (new Set(o.clothes_ids).size !== o.clothes_ids.length) return false;
+        const counts = (['top', 'bottom', 'shoes', 'jacket', 'accessory'] as const)
+          .map((category) => o.clothes_ids.filter((id) => byCategory.get(id) === category).length);
+        return counts[0] === 1 && counts[1] === 1 && counts[2] === 1 &&
+          counts[3] <= 1 && counts[4] <= 1 && counts.reduce((sum, n) => sum + n, 0) === o.clothes_ids.length;
+      });
 
     const uniqueSuggestions = isWeek
       ? suggestions.filter(

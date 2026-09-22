@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LaundryDrop } from '@/components/LaundryDrop';
+import { GarmentStylingFields } from '@/components/GarmentStylingFields';
 import { StudioSheet } from '@/components/StudioSheet';
-import { categoryKey } from '@/constants/categories';
-import { colorName } from '@/lib/color';
+import { CATEGORIES, categoryKey } from '@/constants/categories';
+import { extractGarmentPalette } from '@/lib/color';
+import { colorsFromHexes, primaryColorHex, readGarmentMeta, writeGarmentMeta, type GarmentColor } from '@/lib/garmentMeta';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -25,8 +27,9 @@ import {
   renameClothing,
   setClothingDirty,
   setClothingFavorite,
+  updateClothingStyling,
 } from '@/lib/clothes';
-import type { Clothing } from '@/lib/types';
+import type { Clothing, ClothingCategory } from '@/lib/types';
 import { optimizeLegacyCleanPhotos } from '@/lib/images';
 import { daysSince, fetchWearStats, wornLabel, type WearStat } from '@/lib/wear';
 
@@ -39,6 +42,10 @@ export default function ItemSheet() {
   const [item, setItem] = useState<Clothing | null>(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
+  const [category, setCategory] = useState<ClothingCategory | null>(null);
+  const [garmentColors, setGarmentColors] = useState<GarmentColor[]>([]);
+  const [description, setDescription] = useState('');
+  const [stylingBusy, setStylingBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [nameSaved, setNameSaved] = useState(false);
@@ -53,6 +60,10 @@ export default function ItemSheet() {
       const found = await fetchClothing(id);
       setItem(found);
       setName(found?.name ?? '');
+      setCategory(found?.category ?? null);
+      const meta = found ? readGarmentMeta(found) : { colors: [] as GarmentColor[], description: '' };
+      setGarmentColors(meta.colors);
+      setDescription(meta.description);
       if (found) {
         fetchWearStats(found.user_id)
           .then((stats) => setWear(stats.get(found.id)))
@@ -89,6 +100,31 @@ export default function ItemSheet() {
     } catch {
       load();
     }
+  }
+
+  async function onSaveStyling() {
+    if (!item) return;
+    setStylingBusy(true);
+    setMsg(null);
+    const values = { category, dominant_color: primaryColorHex(garmentColors),
+      style_tags: writeGarmentMeta(item.style_tags, garmentColors, description) };
+    try {
+      await updateClothingStyling(item.id, values);
+      setItem({ ...item, ...values });
+      setMsg(locale === 'fr' ? 'Informations transmises au styliste.' : 'Details saved for the stylist.');
+    } catch (e: any) {
+      setMsg(e?.message ?? t('common.error'));
+    } finally {
+      setStylingBusy(false);
+    }
+  }
+
+  async function onReanalyse() {
+    if (!item) return;
+    setStylingBusy(true);
+    const palette = await extractGarmentPalette(item.photo_url, item.id);
+    setGarmentColors(colorsFromHexes(palette));
+    setStylingBusy(false);
   }
 
   async function onToggleDirty() {
@@ -277,11 +313,11 @@ export default function ItemSheet() {
         {/* Meta */}
         <View style={{ gap: spacing.sm }}>
           <Row label={t('item.category')} value={t(categoryKey(item.category))} />
-          {item.dominant_color ? (
+          {garmentColors.length ? (
             <Row
               label={t('item.color')}
-              value={colorName(item.dominant_color, locale) ?? item.dominant_color}
-              swatch={item.dominant_color}
+              value={garmentColors.join(' + ')}
+              swatch={primaryColorHex(garmentColors) ?? undefined}
             />
           ) : null}
           {wearLoaded ? (
@@ -298,6 +334,37 @@ export default function ItemSheet() {
             </>
           ) : null}
           <Row label={t('item.addedOn')} value={added} />
+        </View>
+
+        <View style={{ gap: spacing.md }}>
+          <Text style={[typography.h3, { color: colors.text }]}>
+            {locale === 'fr' ? 'Fiche styliste' : 'Stylist details'}
+          </Text>
+          <Text style={[typography.eyebrow, { color: colors.textMuted }]}>{t('item.category')}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {CATEGORIES.map((choice) => (
+              <Pressable key={choice.key} onPress={() => setCategory(choice.key)}
+                style={{ paddingVertical: 9, paddingHorizontal: spacing.md, borderRadius: radius.full,
+                  borderWidth: 1, borderColor: category === choice.key ? colors.accent : colors.border,
+                  backgroundColor: category === choice.key ? colors.accentSoft : colors.surface }}>
+                <Text style={[typography.caption, { color: colors.text }]}>{t(`category.${choice.key}`)}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <GarmentStylingFields colors={garmentColors} onColors={setGarmentColors}
+            description={description} onDescription={setDescription} />
+          <Pressable disabled={stylingBusy} onPress={onReanalyse}
+            style={{ paddingVertical: 10, alignItems: 'center' }}>
+            <Text style={[typography.caption, { color: colors.textMuted }]}>
+              {locale === 'fr' ? 'Réanalyser les couleurs de la photo' : 'Reanalyse photo colours'}
+            </Text>
+          </Pressable>
+          <Pressable disabled={stylingBusy} onPress={onSaveStyling}
+            style={{ minHeight: 52, alignItems: 'center', justifyContent: 'center',
+              borderRadius: radius.full, backgroundColor: colors.accent }}>
+            {stylingBusy ? <ActivityIndicator color={colors.accentText} /> :
+              <Text style={[typography.button, { color: colors.accentText }]}>{t('common.save')}</Text>}
+          </Pressable>
         </View>
 
         {/* Actions */}

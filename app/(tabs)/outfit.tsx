@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
@@ -15,7 +16,7 @@ import { useWeather } from '@/hooks/useWeather';
 import { OutfitConfirmed } from '@/components/OutfitConfirmed';
 import { ShareLookButton } from '@/components/ShareLookButton';
 import { fetchClothes, markOutfitDirty, setClothingDirty } from '@/lib/clothes';
-import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked } from '@/lib/outfits';
+import { fetchTodaysWornOutfit, fetchWeeklyOutfits, generateOutfits, saveWornOutfit, setOutfitLiked, validLook } from '@/lib/outfits';
 import { generateTryOn, type TryOnResponse } from '@/lib/tryon';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { weatherContext } from '@/lib/weather';
@@ -43,11 +44,13 @@ function indicesForIds(buckets: Buckets, ids: string[]): Indices {
 }
 
 const INITIAL_INDICES: Indices = { top: 0, bottom: 0, shoes: 0, jacket: -1, accessory: -1 };
+const draftKey = (userId: string) => `wardrobe:day-draft:${userId}:${dateKey(new Date())}`;
 
 export default function OutfitDay() {
   const { colors, dark } = useTheme();
   const { session, profile } = useAuth();
-  const { t } = useLocale();
+  const userId = session?.user?.id;
+  const { t, locale } = useLocale();
   const router = useRouter();
   const { state } = useWeather();
   const weather = state.status === 'ready' ? state.weather : null;
@@ -61,16 +64,19 @@ export default function OutfitDay() {
   const [styling, setStyling] = useState(false);
   const [styleMsg, setStyleMsg] = useState<string | null>(null);
   const [styled, setStyled] = useState(false);
+  const [rationale, setRationale] = useState<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmedItems, setConfirmedItems] = useState<Clothing[]>([]);
   /** Non-null once today's look is validated: the studio becomes read-only. */
   const [locked, setLocked] = useState<Clothing[] | null>(null);
 
   const load = useCallback(async () => {
-    if (!session?.user) return;
+    if (!userId) return;
+    setDraftReady(false);
     setLoading(true);
     try {
-      const items = await fetchClothes(session.user.id);
+      const items = await fetchClothes(userId);
       const next = emptyBuckets();
       // Dirty laundry is not wearable today.
       for (const item of items) if (item.category && !item.dirty) next[item.category].push(item);
@@ -78,10 +84,11 @@ export default function OutfitDay() {
       setIdx(INITIAL_INDICES);
       setSaved(false);
       setSavedOutfitId(null);
+      setRationale(null);
 
       // A look validated today locks the studio until the user changes it.
       try {
-        const worn = await fetchTodaysWornOutfit(session.user.id);
+        const worn = await fetchTodaysWornOutfit(userId);
         if (worn) {
           const byId = new Map(items.map((piece) => [piece.id, piece]));
           const pieces = worn.clothes_ids
@@ -91,16 +98,35 @@ export default function OutfitDay() {
           setSavedOutfitId(worn.id);
         } else {
           setLocked(null);
-          const [planned] = await fetchWeeklyOutfits(session.user.id, [dateKey(new Date())]);
-          if (planned) setIdx(indicesForIds(next, planned.clothes_ids));
+          let restored = false;
+          try {
+            const raw = await AsyncStorage.getItem(draftKey(userId));
+            if (raw) {
+              const draft = JSON.parse(raw) as { ids: string[]; rationale?: string | null };
+              if (validLook(draft.ids, items)) {
+                setIdx(indicesForIds(next, draft.ids));
+                setRationale(draft.rationale ?? null);
+                setStyled(Boolean(draft.rationale));
+                restored = true;
+              }
+            }
+          } catch { /* A corrupt local draft must not block the studio. */ }
+          if (!restored) {
+            const [planned] = await fetchWeeklyOutfits(userId, [dateKey(new Date())]);
+            if (planned && validLook(planned.clothes_ids, items)) {
+              setIdx(indicesForIds(next, planned.clothes_ids));
+              setRationale(planned.rationale);
+            }
+          }
         }
       } catch {
         setLocked(null);
       }
     } finally {
       setLoading(false);
+      setDraftReady(true);
     }
-  }, [session]);
+  }, [userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -117,6 +143,13 @@ export default function OutfitDay() {
     [current]
   );
 
+  useEffect(() => {
+    if (!draftReady || !userId || locked || !hasRequired) return;
+    const ids = selectedIds();
+    if (!validLook(ids, Object.values(buckets).flat())) return;
+    void AsyncStorage.setItem(draftKey(userId), JSON.stringify({ ids, rationale }));
+  }, [draftReady, userId, locked, hasRequired, idx, buckets, rationale, selectedIds]);
+
   function resetSavedState() {
     setSaved(false);
     setSavedOutfitId(null);
@@ -124,6 +157,7 @@ export default function OutfitDay() {
 
   function cycle(category: ClothingCategory, direction: 1 | -1) {
     resetSavedState();
+    setRationale(null);
     setIdx((previous) => {
       const list = buckets[category];
       if (list.length === 0) return previous;
@@ -137,6 +171,7 @@ export default function OutfitDay() {
 
   function shuffle() {
     resetSavedState();
+    setRationale(null);
     const pick = (category: ClothingCategory, optional = false) => {
       const count = buckets[category].length;
       if (count === 0) return optional ? -1 : 0;
@@ -183,7 +218,13 @@ export default function OutfitDay() {
       } else if (error) {
         setStyleMsg(error);
       } else if (outfits.length > 0) {
-        applyOutfitIds(outfits[0].clothes_ids);
+        const selected = outfits.find((outfit) => validLook(outfit.clothes_ids, Object.values(buckets).flat()));
+        if (!selected) {
+          setStyleMsg(t('today.noOutfitBody'));
+          return;
+        }
+        applyOutfitIds(selected.clothes_ids);
+        setRationale(selected.rationale);
         setStyled(true);
       }
     } catch (e: any) {
@@ -244,6 +285,7 @@ export default function OutfitDay() {
     setConfirmedItems(worn);
     setShowConfirm(true);
     setLocked(worn);
+    if (session?.user) void AsyncStorage.removeItem(draftKey(session.user.id));
   }
 
   async function runTryOn(): Promise<TryOnResponse> {
@@ -319,6 +361,7 @@ export default function OutfitDay() {
             accessories={buckets.accessory}
           onSelectAccessory={(item) => {
             resetSavedState();
+            setRationale(null);
             setIdx((previous) => ({
               ...previous,
               accessory: item ? buckets.accessory.findIndex((piece) => piece.id === item.id) : -1,
@@ -327,6 +370,19 @@ export default function OutfitDay() {
           onPrevious={(category) => cycle(category, -1)}
             onNext={(category) => cycle(category, 1)}
           />
+
+          {rationale && !locked ? (
+            <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md,
+              borderRadius: radius.md, backgroundColor: colors.surface }}>
+              <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={[typography.eyebrow, { color: colors.accent }]}>
+                  {locale === 'fr' ? 'POURQUOI CE LOOK' : 'WHY THIS LOOK'}
+                </Text>
+                <Text style={[typography.small, { color: colors.text }]}>{rationale}</Text>
+              </View>
+            </View>
+          ) : null}
 
           {locked ? (
             <View style={{ gap: spacing.md, alignItems: 'center' }}>

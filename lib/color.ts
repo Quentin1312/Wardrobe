@@ -12,8 +12,6 @@ import type { Locale } from '@/lib/i18n';
  * from the border pixels and ignored, and the most common remaining colour is
  * returned as a hex string.
  */
-const SAMPLE_WIDTH = 48;
-
 async function toLocalUri(uri: string, key: string): Promise<string> {
   // The manipulator only reads local files on native; the web build can load URLs.
   if (Platform.OS === 'web' || /^(file|data|blob|content|ph|assets-library):/.test(uri)) return uri;
@@ -44,8 +42,13 @@ export async function samplePixels(
 }
 
 export async function extractDominantColor(uri: string, key = 'sample'): Promise<string | null> {
-  const img = await samplePixels(uri, SAMPLE_WIDTH, key);
-  return img ? dominantFromPixels(img.data, img.width, img.height) : null;
+  return (await extractGarmentPalette(uri, key))[0] ?? null;
+}
+
+/** Several meaningful garment colours, not just the largest dark area/sole. */
+export async function extractGarmentPalette(uri: string, key = 'sample'): Promise<string[]> {
+  const img = await samplePixels(uri, 72, key);
+  return img ? paletteFromPixels(img.data, img.width, img.height) : [];
 }
 
 type RGB = [number, number, number];
@@ -60,6 +63,11 @@ function median(values: number[]): number {
 }
 
 export function dominantFromPixels(data: Uint8Array, width: number, height: number): string | null {
+  return paletteFromPixels(data, width, height)[0] ?? null;
+}
+
+export function paletteFromPixels(data: Uint8Array, width: number, height: number): string[] {
+  if (width < 3 || height < 3) return [];
   const px = (x: number, y: number): RGB => {
     const i = (y * width + x) * 4;
     return [data[i], data[i + 1], data[i + 2]];
@@ -72,7 +80,7 @@ export function dominantFromPixels(data: Uint8Array, width: number, height: numb
   const bg: RGB = [0, 1, 2].map((c) => median(border.map((p) => p[c]))) as RGB;
 
   const collect = (skipBackground: boolean, inset: number) => {
-    const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
+    const buckets = new Map<string, { n: number; r: number; g: number; b: number; chromatic: boolean }>();
     let kept = 0;
     const x0 = Math.floor(width * inset);
     const y0 = Math.floor(height * inset);
@@ -81,12 +89,16 @@ export function dominantFromPixels(data: Uint8Array, width: number, height: numb
         const p = px(x, y);
         if (skipBackground && dist(p, bg) < 42) continue;
         kept += 1;
-        const key = ((p[0] >> 4) << 8) | ((p[1] >> 4) << 4) | (p[2] >> 4);
-        const bucket = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
+        const hex = `#${p.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+        const key = colorName(hex, 'fr') ?? 'inconnu';
+        const hsl = hexToHsl(hex);
+        const chromatic = Boolean(hsl && hsl[1] >= 0.16 && hsl[2] >= 0.12 && hsl[2] <= 0.85);
+        const bucket = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0, chromatic };
         bucket.n += 1;
         bucket.r += p[0];
         bucket.g += p[1];
         bucket.b += p[2];
+        bucket.chromatic ||= chromatic;
         buckets.set(key, bucket);
       }
     }
@@ -96,15 +108,13 @@ export function dominantFromPixels(data: Uint8Array, width: number, height: numb
   let { buckets, kept } = collect(true, 0.08);
   // Garment the same colour as the background: fall back to the centre.
   if (kept < width * height * 0.05) ({ buckets, kept } = collect(false, 0.3));
-  if (kept === 0) return null;
-
-  let best: { n: number; r: number; g: number; b: number } | null = null;
-  for (const bucket of buckets.values()) if (!best || bucket.n > best.n) best = bucket;
-  if (!best) return null;
-  const hex = [best.r, best.g, best.b]
-    .map((sum) => Math.round(sum / best!.n).toString(16).padStart(2, '0'))
-    .join('');
-  return `#${hex}`;
+  if (kept === 0) return [];
+  const ranked = [...buckets.values()]
+    .filter((bucket) => bucket.n / kept >= (bucket.chromatic ? 0.045 : 0.09))
+    .sort((a, b) => (b.n * (b.chromatic ? 1.8 : 1)) - (a.n * (a.chromatic ? 1.8 : 1)));
+  if (ranked.length === 0) ranked.push([...buckets.values()].sort((a, b) => b.n - a.n)[0]);
+  return ranked.slice(0, 3).map((bucket) => `#${[bucket.r, bucket.g, bucket.b]
+    .map((sum) => Math.round(sum / bucket.n).toString(16).padStart(2, '0')).join('')}`);
 }
 
 // ---------------------------------------------------------------------------

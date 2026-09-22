@@ -120,6 +120,15 @@ export async function setClothingColor(id: string, hex: string): Promise<void> {
   invalidateClothesCache();
 }
 
+export async function updateClothingStyling(
+  id: string,
+  values: Pick<Clothing, 'category' | 'dominant_color' | 'style_tags'>
+): Promise<void> {
+  const { error } = await supabase.from('clothes').update(values).eq('id', id);
+  if (error) throw error;
+  invalidateClothesCache();
+}
+
 export async function setClothingDirty(id: string, dirty: boolean): Promise<void> {
   const { error } = await supabase.from('clothes').update({ dirty }).eq('id', id);
   if (error) throw error;

@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { pickFromLibrary, takePhoto } from '@/components/PhotoPicker';
+import { GarmentStylingFields } from '@/components/GarmentStylingFields';
 import { Button, Field } from '@/components/ui';
 import { CATEGORIES } from '@/constants/categories';
 import { radius, spacing, typography } from '@/constants/theme';
@@ -14,7 +15,8 @@ import { useLocale } from '@/context/LocaleContext';
 import { addClothing, deleteClothing, removeBackground } from '@/lib/clothes';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { uploadImage } from '@/lib/upload';
-import { extractDominantColor } from '@/lib/color';
+import { extractGarmentPalette } from '@/lib/color';
+import { colorsFromHexes, primaryColorHex, writeGarmentMeta, type GarmentColor } from '@/lib/garmentMeta';
 import { optimizeLegacyCleanPhotos } from '@/lib/images';
 import { checkCutout, checkPhoto, type CutoutIssue, type PhotoIssue } from '@/lib/photoQuality';
 
@@ -35,6 +37,8 @@ export default function AddItem() {
   const [asset, setAsset] = useState<ImagePickerAsset | null>(null);
   const [category, setCategory] = useState<ClothingCategory | null>(null);
   const [name, setName] = useState('');
+  const [garmentColors, setGarmentColors] = useState<GarmentColor[]>([]);
+  const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [check, setCheck] = useState<Check>({ status: 'idle' });
@@ -47,7 +51,11 @@ export default function AddItem() {
   function onPicked(a: ImagePickerAsset | null) {
     if (!a) return;
     setAsset(a);
+    setGarmentColors([]);
     const run = ++checkRun.current;
+    void extractGarmentPalette(a.uri, `preview-${run}`).then((palette) => {
+      if (run === checkRun.current) setGarmentColors(colorsFromHexes(palette));
+    });
     setCheck({ status: 'checking' });
     checkPhoto(a.uri)
       .then((res) => {
@@ -69,12 +77,10 @@ export default function AddItem() {
     try {
       const userId = session.user.id;
       const path = `${userId}/${Date.now()}.jpg`;
-      // Upload and read the garment's colour (free, on-device) in parallel.
-      const [url, dominantColor] = await Promise.all([
-        uploadImage('clothes', path, asset),
-        extractDominantColor(asset.uri, String(Date.now())),
-      ]);
-      const clothing = await addClothing({ userId, photoUrl: url, category, name, dominantColor });
+      const url = await uploadImage('clothes', path, asset);
+      const clothing = await addClothing({ userId, photoUrl: url, category, name,
+        dominantColor: primaryColorHex(garmentColors),
+        styleTags: writeGarmentMeta([], garmentColors, description) });
       // Remove the background so the piece renders cleanly on the mannequin.
       setProcessing(true);
       const clean = await removeBackground(clothing.id); // best-effort; item is saved regardless
@@ -250,6 +256,9 @@ export default function AddItem() {
               })}
             </View>
           </View>
+
+          <GarmentStylingFields colors={garmentColors} onColors={setGarmentColors}
+            description={description} onDescription={setDescription} />
 
           <Button
             label={processing ? t('add.processing') : t('add.save')}
