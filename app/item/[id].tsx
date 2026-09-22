@@ -21,7 +21,6 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 import {
-  analyzeClothing,
   deleteClothing,
   fetchClothing,
   removeBackground,
@@ -45,7 +44,6 @@ export default function ItemSheet() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ClothingCategory | null>(null);
   const [garmentColors, setGarmentColors] = useState<GarmentColor[]>([]);
-  const [description, setDescription] = useState('');
   const [stylingBusy, setStylingBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -62,9 +60,8 @@ export default function ItemSheet() {
       setItem(found);
       setName(found?.name ?? '');
       setCategory(found?.category ?? null);
-      const meta = found ? readGarmentMeta(found) : { colors: [] as GarmentColor[], description: '' };
+      const meta = found ? readGarmentMeta(found) : { colors: [] as GarmentColor[] };
       setGarmentColors(meta.colors);
-      setDescription(meta.description);
       if (found) {
         fetchWearStats(found.user_id)
           .then((stats) => setWear(stats.get(found.id)))
@@ -107,38 +104,15 @@ export default function ItemSheet() {
     if (!item) return;
     setStylingBusy(true);
     setMsg(null);
-    const values = { name: name.trim() || null, category, dominant_color: primaryColorHex(garmentColors),
-      style_tags: writeGarmentMeta(item.style_tags, garmentColors, description) };
     try {
+      const latest = await fetchClothing(item.id);
+      const preserved = latest ?? item;
+      const values = { name: name.trim() || null, category, dominant_color: primaryColorHex(garmentColors),
+        style_tags: [...writeGarmentMeta(preserved.style_tags, garmentColors, readGarmentMeta(preserved).description)
+          .filter((tag) => tag !== 'couleurs-manuel'), 'couleurs-manuel'] };
       await updateClothingStyling(item.id, values);
       setItem({ ...item, ...values });
       setMsg(locale === 'fr' ? 'Informations transmises au styliste.' : 'Details saved for the stylist.');
-    } catch (e: any) {
-      setMsg(e?.message ?? t('common.error'));
-    } finally {
-      setStylingBusy(false);
-    }
-  }
-
-  async function onAnalyzePhoto() {
-    if (!item) return;
-    setStylingBusy(true);
-    setMsg(null);
-    try {
-      const { suggestion, error } = await analyzeClothing(item.id, locale);
-      if (error || !suggestion) {
-        setMsg(error === 'not_clothing'
-          ? (locale === 'fr' ? 'La photo ne semble pas montrer un vêtement. Vérifie-la.' : 'This photo does not appear to show clothing.')
-          : error ?? t('common.error'));
-        return;
-      }
-      setCategory(suggestion.category);
-      setGarmentColors(suggestion.colors);
-      setDescription(suggestion.description);
-      if (suggestion.name) setName(suggestion.name);
-      setMsg(locale === 'fr'
-        ? 'Proposition IA prête : vérifie la fiche puis appuie sur Enregistrer.'
-        : 'AI suggestion ready: review it, then tap Save.');
     } catch (e: any) {
       setMsg(e?.message ?? t('common.error'));
     } finally {
@@ -365,22 +339,7 @@ export default function ItemSheet() {
 
         <View style={{ gap: spacing.md }}>
           <Text style={[typography.h3, { color: colors.text }]}>
-            {locale === 'fr' ? 'Fiche styliste' : 'Stylist details'}
-          </Text>
-          <Pressable disabled={stylingBusy} onPress={onAnalyzePhoto}
-            style={{ minHeight: 52, flexDirection: 'row', alignItems: 'center',
-              justifyContent: 'center', gap: spacing.sm, borderRadius: radius.full,
-              backgroundColor: colors.energy }}>
-            {stylingBusy ? <ActivityIndicator color={colors.energyText} /> :
-              <Ionicons name="sparkles-outline" size={19} color={colors.energyText} />}
-            <Text style={[typography.button, { color: colors.energyText }]}>
-              {locale === 'fr' ? 'Analyser cette photo avec l’IA' : 'Analyse this photo with AI'}
-            </Text>
-          </Pressable>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>
-            {locale === 'fr'
-              ? 'En appuyant, cette photo est envoyée à OpenAI. Nom, catégorie, couleurs et détails sont proposés, jamais enregistrés sans ta validation.'
-              : 'Tapping sends this photo to OpenAI. Name, category, colours and details are suggested, never saved without your confirmation.'}
+            {locale === 'fr' ? 'Couleurs et catégorie' : 'Colours and category'}
           </Text>
           <Text style={[typography.eyebrow, { color: colors.textMuted }]}>{t('item.category')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -393,8 +352,7 @@ export default function ItemSheet() {
               </Pressable>
             ))}
           </View>
-          <GarmentStylingFields colors={garmentColors} onColors={setGarmentColors}
-            description={description} onDescription={setDescription} />
+          <GarmentStylingFields colors={garmentColors} onColors={setGarmentColors} />
           <Pressable disabled={stylingBusy} onPress={onReanalyse}
             style={{ paddingVertical: 10, alignItems: 'center' }}>
             <Text style={[typography.caption, { color: colors.textMuted }]}>

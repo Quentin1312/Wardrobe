@@ -1,14 +1,12 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { COLOR_CHOICES, type GarmentColor } from '@/lib/garmentMeta';
 
-export function GarmentStylingFields({ colors, onColors, description, onDescription }: {
+export function GarmentStylingFields({ colors, onColors }: {
   colors: GarmentColor[];
   onColors: (colors: GarmentColor[]) => void;
-  description: string;
-  onDescription: (description: string) => void;
 }) {
   const { colors: theme } = useTheme();
   const { locale } = useLocale();
@@ -50,27 +48,6 @@ export function GarmentStylingFields({ colors, onColors, description, onDescript
             );
           })}
         </View>
-      </View>
-      <View style={{ gap: spacing.sm }}>
-        <Text style={[typography.eyebrow, { color: theme.textMuted }]}>
-          {fr ? 'DÉTAILS POUR LE STYLISTE' : 'DETAILS FOR THE STYLIST'}
-        </Text>
-        <TextInput
-          value={description}
-          onChangeText={onDescription}
-          multiline
-          maxLength={280}
-          placeholder={fr ? 'Ex. baskets basses bordeaux, semelle noire, cuir lisse, style casual…' :
-            'E.g. low burgundy trainers, black sole, smooth leather, casual style…'}
-          placeholderTextColor={theme.textMuted}
-          style={[typography.body, { minHeight: 94, textAlignVertical: 'top', padding: spacing.md,
-            borderRadius: radius.md, borderWidth: 1, borderColor: theme.border,
-            backgroundColor: theme.surface, color: theme.text }]}
-        />
-        <Text style={[typography.caption, { color: theme.textMuted }]}>
-          {fr ? 'Matière, coupe, motif, saison ou usage : ces détails aident à composer une vraie tenue.' :
-            'Fabric, cut, pattern, season or use help create a coherent outfit.'}
-        </Text>
       </View>
     </View>
   );

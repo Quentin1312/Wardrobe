@@ -32,16 +32,17 @@ const TIPS: { icon: keyof typeof Ionicons.glyphMap; key: string }[] = [
 export default function AddItem() {
   const { colors } = useTheme();
   const { session } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
   const [asset, setAsset] = useState<ImagePickerAsset | null>(null);
   const [category, setCategory] = useState<ClothingCategory | null>(null);
   const [name, setName] = useState('');
   const [garmentColors, setGarmentColors] = useState<GarmentColor[]>([]);
-  const [description, setDescription] = useState('');
+  const [colorsTouched, setColorsTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [check, setCheck] = useState<Check>({ status: 'idle' });
   const checkRun = useRef(0);
+  const paletteEdited = useRef(false);
   const studio = useStudioQueue();
 
   /** New photo: check it right away, on the device, for free. */
@@ -49,9 +50,11 @@ export default function AddItem() {
     if (!a) return;
     setAsset(a);
     setGarmentColors([]);
+    setColorsTouched(false);
+    paletteEdited.current = false;
     const run = ++checkRun.current;
     void extractGarmentPalette(a.uri, `preview-${run}`).then((palette) => {
-      if (run === checkRun.current) setGarmentColors(colorsFromHexes(palette));
+      if (run === checkRun.current && !paletteEdited.current) setGarmentColors(colorsFromHexes(palette));
     });
     setCheck({ status: 'checking' });
     checkPhoto(a.uri)
@@ -77,10 +80,13 @@ export default function AddItem() {
       const url = await uploadImage('clothes', path, asset);
       const clothing = await addClothing({ userId, photoUrl: url, category, name,
         dominantColor: primaryColorHex(garmentColors),
-        styleTags: writeGarmentMeta([], garmentColors, description) });
+        styleTags: [
+          ...writeGarmentMeta([], garmentColors, ''),
+          ...(colorsTouched ? ['couleurs-manuel'] : []),
+        ] });
       // Cut-out and studio render happen in the background: adding a piece
       // should take a few seconds, not a minute.
-      studio.enqueue({ id: clothing.id, name: clothing.name ?? name });
+      studio.enqueue({ id: clothing.id, name: clothing.name ?? name, analyze: true });
       router.back();
     } catch (e: any) {
       Alert.alert(t('add.failed'), e.message ?? t('add.failedMsg'));
@@ -190,8 +196,17 @@ export default function AddItem() {
             </View>
           </View>
 
-          <GarmentStylingFields colors={garmentColors} onColors={setGarmentColors}
-            description={description} onDescription={setDescription} />
+          <GarmentStylingFields colors={garmentColors} onColors={(selected) => {
+            setGarmentColors(selected);
+            setColorsTouched(true);
+            paletteEdited.current = true;
+          }} />
+
+          <Text style={[typography.caption, { color: colors.textMuted }]}>
+            {locale === 'fr'
+              ? 'Après l’ajout, la photo est analysée automatiquement pour les couleurs et les détails utiles au styliste. Ton nom et ta catégorie ne changent pas.'
+              : 'After adding, the photo is analysed automatically for colours and stylist details. Your name and category stay unchanged.'}
+          </Text>
 
           <Button
             label={t('add.save')}

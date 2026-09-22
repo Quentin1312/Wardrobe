@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { prefetchClothingImages } from '@/lib/images';
 import type { Clothing, ClothingCategory } from '@/lib/types';
-import type { GarmentColor } from '@/lib/garmentMeta';
 import type { Locale } from '@/lib/i18n';
+import { COLOR_CHOICES, primaryColorHex, readGarmentMeta, writeGarmentMeta, type GarmentColor } from '@/lib/garmentMeta';
 
 const CACHE_TTL_MS = 45_000;
 const clothesCache = new Map<string, { at: number; items: Clothing[] }>();
@@ -132,7 +132,7 @@ export async function updateClothingStyling(
 }
 
 export async function analyzeClothing(id: string, locale: Locale): Promise<{
-  suggestion?: { name: string; category: ClothingCategory; colors: GarmentColor[]; description: string };
+  saved?: boolean;
   error?: string;
 }> {
   const { data, error } = await supabase.functions.invoke('analyze-clothing', {
@@ -147,7 +147,34 @@ export async function analyzeClothing(id: string, locale: Locale): Promise<{
     return { error: detail };
   }
   if (data?.error) return { error: data.error };
-  return { suggestion: data };
+  // The previous deployed function only returns suggestions. Save its colour
+  // and hidden description here until the new server-side version is live.
+  if (data?.saved !== true) {
+    const colors: GarmentColor[] = Array.isArray(data?.colors)
+      ? [...new Set<GarmentColor>(data.colors.filter((color: unknown): color is GarmentColor =>
+          typeof color === 'string' && COLOR_CHOICES.some((choice) => choice.name === color)))].slice(0, 3)
+      : [];
+    const description = typeof data?.description === 'string'
+      ? data.description.trim().replace(/\s+/g, ' ').slice(0, 280)
+      : '';
+    if (!colors.length || !description) return { error: 'unusable_analysis' };
+    try {
+      const item = await fetchClothing(id);
+      if (!item) return { error: 'clothing_not_found' };
+      const manualColors = (item.style_tags ?? []).includes('couleurs-manuel');
+      const styleTags = writeGarmentMeta(item.style_tags,
+        manualColors ? readGarmentMeta(item).colors : colors, description);
+      const { error: saveError } = await supabase.from('clothes').update({
+        style_tags: styleTags,
+        ...(manualColors ? {} : { dominant_color: primaryColorHex(colors) }),
+      }).eq('id', id).eq('user_id', item.user_id);
+      if (saveError) return { error: saveError.message };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'save_failed' };
+    }
+  }
+  invalidateClothesCache();
+  return { saved: true };
 }
 
 export async function setClothingDirty(id: string, dirty: boolean): Promise<void> {

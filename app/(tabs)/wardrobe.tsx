@@ -12,7 +12,7 @@ import { useStudioQueue } from '@/context/StudioQueueProvider';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { cleanMissingBackgrounds, fetchClothes, updateClothingStyling, washAll } from '@/lib/clothes';
+import { cleanMissingBackgrounds, fetchClothes, fetchClothing, updateClothingStyling, washAll } from '@/lib/clothes';
 import { colorName, extractGarmentPalette } from '@/lib/color';
 import { colorsFromHexes, primaryColorHex, readGarmentMeta, writeGarmentMeta } from '@/lib/garmentMeta';
 import { clothingImageUri, optimizeLegacyCleanPhotos } from '@/lib/images';
@@ -45,13 +45,15 @@ export default function Wardrobe() {
   /** One-off palette upgrade for legacy pieces; user-edited palettes are left intact. */
   async function backfillColors(list: Clothing[]) {
     for (const piece of list) {
-      if ((piece.style_tags ?? []).some((tag) => tag.startsWith('couleurs:')) || colorAttempted.has(piece.id)) continue;
+      if ((piece.style_tags ?? []).some((tag) => tag.startsWith('couleurs:') || tag === 'couleurs-manuel') || colorAttempted.has(piece.id)) continue;
       colorAttempted.add(piece.id);
       const colors = colorsFromHexes(await extractGarmentPalette(piece.photo_url, piece.id));
       if (!colors.length) continue;
-      const values = { category: piece.category, dominant_color: primaryColorHex(colors),
-        style_tags: writeGarmentMeta(piece.style_tags, colors, readGarmentMeta(piece).description) };
       try {
+        const latest = await fetchClothing(piece.id);
+        if (!latest || (latest.style_tags ?? []).some((tag) => tag.startsWith('couleurs:') || tag === 'couleurs-manuel')) continue;
+        const values = { category: latest.category, dominant_color: primaryColorHex(colors),
+          style_tags: writeGarmentMeta(latest.style_tags, colors, readGarmentMeta(latest).description) };
         await updateClothingStyling(piece.id, values);
         setItems((prev) => prev.map((p) => (p.id === piece.id ? { ...p, ...values } : p)));
       } catch {

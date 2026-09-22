@@ -1,17 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { generateStudioPhoto, removeBackground, setClothingCleanPhoto } from '@/lib/clothes';
+import { analyzeClothing, generateStudioPhoto, removeBackground, setClothingCleanPhoto } from '@/lib/clothes';
+import { useLocale } from '@/context/LocaleContext';
 
 /**
  * Every new piece gets a studio render, without making the user wait: adding a
  * garment only uploads the photo, then this queue cleans it up in the
  * background (background removal, then the AI packshot) one piece at a time.
+ * New additions are also catalogued for the stylist in parallel.
  */
 interface StudioQueue {
   /** Pieces still being processed. */
   pending: number;
   /** Name of the piece being worked on, for the little badge. */
   current: string | null;
-  enqueue: (job: { id: string; name?: string | null; needsCutout?: boolean }) => void;
+  enqueue: (job: Job) => void;
 }
 
 const Context = createContext<StudioQueue>({ pending: 0, current: null, enqueue: () => {} });
@@ -20,9 +22,10 @@ export function useStudioQueue() {
   return useContext(Context);
 }
 
-type Job = { id: string; name?: string | null; needsCutout?: boolean };
+type Job = { id: string; name?: string | null; needsCutout?: boolean; analyze?: boolean };
 
 export function StudioQueueProvider({ children }: { children: ReactNode }) {
+  const { locale } = useLocale();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
   const running = useRef(false);
@@ -38,6 +41,9 @@ export function StudioQueueProvider({ children }: { children: ReactNode }) {
     setCurrent(job.name ?? null);
 
     (async () => {
+      const analysis = job.analyze
+        ? analyzeClothing(job.id, locale).catch((error) => ({ error: String(error) }))
+        : null;
       try {
         // A quick cut-out first: the wardrobe shows something clean right away.
         if (job.needsCutout !== false) await removeBackground(job.id);
@@ -46,12 +52,16 @@ export function StudioQueueProvider({ children }: { children: ReactNode }) {
       } catch {
         // Best effort: the piece keeps the photo it already has.
       } finally {
+        if (analysis) {
+          const result = await analysis;
+          if (result.error) console.warn('Garment analysis failed:', result.error);
+        }
         running.current = false;
         setCurrent(null);
         setJobs((previous) => previous.filter((j) => j.id !== job.id));
       }
     })();
-  }, [jobs]);
+  }, [jobs, locale]);
 
   return <Context.Provider value={{ pending: jobs.length, current, enqueue }}>{children}</Context.Provider>;
 }
