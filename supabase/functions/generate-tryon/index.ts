@@ -125,7 +125,7 @@ function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
     'Keep everything the person already wears in image 1 that is not replaced: watch, jewellery, rings, piercings, glasses, hair accessories — same items, same wrist or side.',
     hasShoes ? '' : 'Shoes are not provided: keep simple neutral shoes that do not draw attention.',
     garments.some((g) => g.category === 'accessory')
-      ? 'The accessory is worn on the head or face (cap, hat, beanie, glasses): place it naturally, the right way round and at the right size, without hiding the face.'
+      ? 'Accessories listed here are worn on the head or face (cap, hat, beanie, glasses): place each one naturally, the right way round and at the right size, without hiding the face. Glasses go on the eyes, a cap or hat on the head — both can be worn together.'
       : '',
     'THE PERSON MUST STAY THE SAME: same face and identity, same hairstyle and hair colour, same skin tone, same body shape and height. Do not beautify, slim or age them.',
     fixes.length ? `A previous attempt had these problems, fix them precisely: ${fixes.join(' ; ')}` : '',
@@ -335,7 +335,7 @@ Deno.serve(async (request) => {
     const rows = ((clothes ?? []) as ClothingRow[])
       .filter((c) => Boolean(c.category))
       .sort((a, b) => ORDER.indexOf(a.category!) - ORDER.indexOf(b.category!))
-      .slice(0, 5);
+      .slice(0, 6);
     if (rows.filter((r) => r.category !== 'accessory').length === 0) {
       return json({ error: 'no_compatible_garments' }, 400);
     }

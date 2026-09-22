@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
@@ -58,6 +58,8 @@ export default function OutfitDay() {
   const [buckets, setBuckets] = useState<Buckets>(emptyBuckets());
   const [loading, setLoading] = useState(true);
   const [idx, setIdx] = useState<Indices>(INITIAL_INDICES);
+  // Accessories are the one slot you can wear several of (cap + glasses).
+  const [accessoryIds, setAccessoryIds] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
   const [savedOutfitId, setSavedOutfitId] = useState<string | null>(null);
   const [tryOnOpen, setTryOnOpen] = useState(false);
@@ -82,6 +84,7 @@ export default function OutfitDay() {
       for (const item of items) if (item.category && !item.dirty) next[item.category].push(item);
       setBuckets(next);
       setIdx(INITIAL_INDICES);
+      setAccessoryIds([]);
       setSaved(false);
       setSavedOutfitId(null);
       setRationale(null);
@@ -105,6 +108,7 @@ export default function OutfitDay() {
               const draft = JSON.parse(raw) as { ids: string[]; rationale?: string | null };
               if (validLook(draft.ids, items)) {
                 setIdx(indicesForIds(next, draft.ids));
+                setAccessoryIds(next.accessory.filter((piece) => draft.ids.includes(piece.id)).map((piece) => piece.id));
                 setRationale(draft.rationale ?? null);
                 setStyled(Boolean(draft.rationale));
                 restored = true;
@@ -115,6 +119,7 @@ export default function OutfitDay() {
             const [planned] = await fetchWeeklyOutfits(userId, [dateKey(new Date())]);
             if (planned && validLook(planned.clothes_ids, items)) {
               setIdx(indicesForIds(next, planned.clothes_ids));
+              setAccessoryIds(next.accessory.filter((piece) => planned.clothes_ids.includes(piece.id)).map((piece) => piece.id));
               setRationale(planned.rationale);
             }
           }
@@ -132,15 +137,37 @@ export default function OutfitDay() {
 
   const hasRequired = REQUIRED.every((category) => buckets[category].length > 0);
 
+  const accessories = useMemo(
+    () =>
+      locked
+        ? locked.filter((piece) => piece.category === 'accessory')
+        : buckets.accessory.filter((piece) => accessoryIds.includes(piece.id)),
+    [buckets.accessory, accessoryIds, locked]
+  );
+
   const current = useCallback((category: ClothingCategory): Clothing | null => {
+    if (category === 'accessory') return accessories[0] ?? null;
     if (locked) return locked.find((piece) => piece.category === category) ?? null;
     if (OPTIONAL.includes(category) && idx[category] < 0) return null;
     return buckets[category][idx[category]] ?? null;
-  }, [buckets, idx, locked]);
+  }, [accessories, buckets, idx, locked]);
+
+  function toggleAccessory(item: Clothing) {
+    resetSavedState();
+    setRationale(null);
+    setAccessoryIds((previous) =>
+      previous.includes(item.id) ? previous.filter((id) => id !== item.id) : [...previous, item.id]
+    );
+  }
 
   const selectedIds = useCallback(
-    () => OUTFIT_ORDER.map((category) => current(category)?.id).filter((id): id is string => Boolean(id)),
-    [current]
+    () => [
+      ...OUTFIT_ORDER.filter((category) => category !== 'accessory')
+        .map((category) => current(category)?.id)
+        .filter((id): id is string => Boolean(id)),
+      ...accessories.map((piece) => piece.id),
+    ],
+    [accessories, current]
   );
 
   useEffect(() => {
@@ -184,14 +211,17 @@ export default function OutfitDay() {
       bottom: pick('bottom'),
       shoes: pick('shoes'),
       jacket: pick('jacket', true),
-      accessory: pick('accessory', true),
     }));
+    // None most of the time, one usually, two once in a while.
+    const pool = [...buckets.accessory].sort(() => Math.random() - 0.5);
+    const howMany = Math.random() < 0.35 ? 0 : Math.random() < 0.8 ? 1 : 2;
+    setAccessoryIds(pool.slice(0, Math.min(howMany, pool.length)).map((piece) => piece.id));
   }
 
   /** Points each slot at the garments the stylist picked. */
   function applyOutfitIds(ids: string[]) {
     setIdx((previous) => {
-      const next: Indices = { ...previous, jacket: -1, accessory: -1 };
+      const next: Indices = { ...previous, jacket: -1 };
       const wearable: ClothingCategory[] = OUTFIT_ORDER;
       for (const id of ids) {
         for (const category of wearable) {
@@ -201,6 +231,7 @@ export default function OutfitDay() {
       }
       return next;
     });
+    setAccessoryIds(buckets.accessory.filter((piece) => ids.includes(piece.id)).map((piece) => piece.id));
   }
 
   /** Ask the AI stylist for a weather-aware look. */
@@ -268,9 +299,12 @@ export default function OutfitDay() {
   }
 
   async function validate() {
-    const worn = OUTFIT_ORDER
-      .map((category) => current(category))
-      .filter((piece): piece is Clothing => Boolean(piece));
+    const worn = [
+      ...OUTFIT_ORDER.filter((category) => category !== 'accessory')
+        .map((category) => current(category))
+        .filter((piece): piece is Clothing => Boolean(piece)),
+      ...accessories,
+    ];
 
     await persistCurrentOutfit(true);
     setSaved(true);
@@ -304,9 +338,12 @@ export default function OutfitDay() {
     jacket: buckets.jacket.length,
     accessory: buckets.accessory.length,
   };
-  const tryOnItems = TRYON_CATEGORIES.map((category) => current(category)).filter(
-    (piece): piece is Clothing => Boolean(piece)
-  );
+  const tryOnItems = [
+    ...TRYON_CATEGORIES.filter((category) => category !== 'accessory')
+      .map((category) => current(category))
+      .filter((piece): piece is Clothing => Boolean(piece)),
+    ...accessories,
+  ];
   const profilePhoto = profile?.profile_photo_clean_url ?? profile?.profile_photo_url ?? null;
 
   return (
@@ -359,15 +396,9 @@ export default function OutfitDay() {
             counts={counts}
             locked={!!locked}
             accessories={buckets.accessory}
-          onSelectAccessory={(item) => {
-            resetSavedState();
-            setRationale(null);
-            setIdx((previous) => ({
-              ...previous,
-              accessory: item ? buckets.accessory.findIndex((piece) => piece.id === item.id) : -1,
-            }));
-          }}
-          onPrevious={(category) => cycle(category, -1)}
+            selectedAccessories={accessories}
+            onToggleAccessory={toggleAccessory}
+            onPrevious={(category) => cycle(category, -1)}
             onNext={(category) => cycle(category, 1)}
           />
 

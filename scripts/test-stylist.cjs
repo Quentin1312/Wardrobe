@@ -47,6 +47,11 @@ assert.deepEqual(meta.readGarmentMeta({ style_tags: tags, dominant_color: '#1111
 
 const clothes = ['top', 'bottom', 'shoes', 'jacket'].map((category) => ({ id: category, category, dirty: false }));
 assert(outfits.validLook(['top', 'bottom', 'shoes'], clothes));
+assert(outfits.validLook(['top', 'bottom', 'shoes', 'cap', 'glasses'], [
+  ...clothes,
+  { id: 'cap', category: 'accessory', dirty: false },
+  { id: 'glasses', category: 'accessory', dirty: false },
+]));
 assert(!outfits.validLook(['top', 'bottom'], clothes));
 assert(!outfits.validLook(['top', 'bottom', 'shoes', 'shoes'], clothes));
 assert(!outfits.validLook(['top', 'bottom', 'shoes', 'jacket'], clothes.map((c) =>

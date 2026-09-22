@@ -15,7 +15,9 @@ interface OutfitStudioProps {
   counts: Record<ClothingCategory, number>;
   /** Accessories to choose from, shown as a row under the look. */
   accessories?: Clothing[];
-  onSelectAccessory?: (item: Clothing | null) => void;
+  /** Those currently worn — several can be on at once (cap + glasses). */
+  selectedAccessories?: Clothing[];
+  onToggleAccessory?: (item: Clothing) => void;
   onPrevious: (category: ClothingCategory) => void;
   onNext: (category: ClothingCategory) => void;
   /** Today's look is settled: show it, but don't let it be changed. */
@@ -49,7 +51,8 @@ export function OutfitStudio({
   current,
   counts,
   accessories = [],
-  onSelectAccessory,
+  selectedAccessories,
+  onToggleAccessory,
   onPrevious,
   onNext,
   locked,
@@ -58,6 +61,7 @@ export function OutfitStudio({
   const top = current('top');
   const jacket = current('jacket');
   const accessory = current('accessory');
+  const worn = selectedAccessories ?? (accessory ? [accessory] : []);
   const [active, setActive] = useState<'top' | 'jacket'>('top');
 
   // No jackets in the wardrobe: the arrows always drive the top.
@@ -67,7 +71,7 @@ export function OutfitStudio({
 
   const showBottom = locked ? Boolean(current('bottom')) : counts.bottom > 0;
   const showShoes = locked ? Boolean(current('shoes')) : counts.shoes > 0;
-  const showAccessory = locked ? Boolean(accessory) : counts.accessory > 0;
+  const showAccessory = locked ? worn.length > 0 : counts.accessory > 0;
 
   return (
     <View
@@ -123,30 +127,33 @@ export function OutfitStudio({
       {showAccessory ? (
         <AccessoryPicker
           items={accessories}
-          selected={accessory}
+          worn={worn}
           locked={locked}
-          onSelect={onSelectAccessory ?? (() => onNext('accessory'))}
+          onToggle={onToggleAccessory ?? (() => onNext('accessory'))}
         />
       ) : null}
     </View>
   );
 }
 
-/** Accessories as a row of thumbnails: tap one to wear it, tap it again to drop it. */
+/**
+ * Accessories as a row of thumbnails: tap one to wear it, tap it again to drop
+ * it. Several can be worn at the same time (a cap and glasses, say).
+ */
 function AccessoryPicker({
   items,
-  selected,
+  worn,
   locked,
-  onSelect,
+  onToggle,
 }: {
   items: Clothing[];
-  selected: Clothing | null;
+  worn: Clothing[];
   locked?: boolean;
-  onSelect: (item: Clothing | null) => void;
+  onToggle: (item: Clothing) => void;
 }) {
   const { colors } = useTheme();
   const { t } = useLocale();
-  const list = items.length > 0 ? items : selected ? [selected] : [];
+  const list = items.length > 0 ? items : worn;
   if (list.length === 0) return null;
 
   return (
@@ -154,12 +161,14 @@ function AccessoryPicker({
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={[typography.eyebrow, { color: colors.textMuted, fontSize: 9 }]}>{t('category.accessory')}</Text>
         <Text numberOfLines={1} style={[typography.caption, { color: colors.text, flex: 1 }]}>
-          {selected?.name ?? t('outfitDay.none')}
+          {worn.length > 0
+            ? worn.map((piece) => piece.name ?? t('category.accessory')).join(' · ')
+            : t('outfitDay.none')}
         </Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: spacing.md }}>
         {list.map((item) => {
-          const on = selected?.id === item.id;
+          const on = worn.some((piece) => piece.id === item.id);
           return (
             <Pressable
               key={item.id}
@@ -167,7 +176,7 @@ function AccessoryPicker({
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
               accessibilityLabel={item.name ?? t('category.accessory')}
-              onPress={() => onSelect(on ? null : item)}
+              onPress={() => onToggle(item)}
               style={({ pressed }) => ({
                 width: 66,
                 height: 66,

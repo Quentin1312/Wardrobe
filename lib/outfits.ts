@@ -9,7 +9,7 @@ export function validLook(ids: string[], clothes: Clothing[]): boolean {
   if (new Set(ids).size !== ids.length || ids.some((id) => !byId.has(id))) return false;
   const count = (category: Clothing['category']) => ids.filter((id) => byId.get(id)?.category === category).length;
   return count('top') === 1 && count('bottom') === 1 && count('shoes') === 1 &&
-    count('jacket') <= 1 && count('accessory') <= 1 && ids.length ===
+    count('jacket') <= 1 && ids.length ===
     ['top', 'bottom', 'shoes', 'jacket', 'accessory'].reduce((n, category) => n + count(category as Clothing['category']), 0);
 }
 
