@@ -6,10 +6,12 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { OutfitStudio } from '@/components/OutfitStudio';
+import { CompanionAvatar } from '@/components/companion/CompanionAvatar';
 import { StylistLoader } from '@/components/StylistLoader';
 import { TryOnSheet } from '@/components/TryOnSheet';
 import { radius, shadows, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useCompanion } from '@/context/CompanionProvider';
 import { useLocale } from '@/context/LocaleContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useWeather } from '@/hooks/useWeather';
@@ -64,6 +66,8 @@ export default function OutfitDay() {
   const [savedOutfitId, setSavedOutfitId] = useState<string | null>(null);
   const [tryOnOpen, setTryOnOpen] = useState(false);
   const [occasion, setOccasion] = useState<Occasion>('daily');
+  // Nothing is shown until the user asks for a look (or one was saved today).
+  const [composed, setComposed] = useState(false);
   const [styling, setStyling] = useState(false);
   const [styleMsg, setStyleMsg] = useState<string | null>(null);
   const [styled, setStyled] = useState(false);
@@ -109,8 +113,11 @@ export default function OutfitDay() {
               const draft = JSON.parse(raw) as { ids: string[]; rationale?: string | null };
               if (validLook(draft.ids, items)) {
                 setIdx(indicesForIds(next, draft.ids));
-                setAccessoryIds(next.accessory.filter((piece) => draft.ids.includes(piece.id)).map((piece) => piece.id));
+                setAccessoryIds(
+                  next.accessory.filter((piece) => draft.ids.includes(piece.id)).map((piece) => piece.id)
+                );
                 setRationale(draft.rationale ?? null);
+                setComposed(true);
                 setStyled(Boolean(draft.rationale));
                 restored = true;
               }
@@ -120,6 +127,7 @@ export default function OutfitDay() {
             const [planned] = await fetchWeeklyOutfits(userId, [dateKey(new Date())]);
             if (planned && validLook(planned.clothes_ids, items)) {
               setIdx(indicesForIds(next, planned.clothes_ids));
+              setComposed(true);
               setAccessoryIds(
                 next.accessory.filter((piece) => planned.clothes_ids.includes(piece.id)).map((piece) => piece.id)
               );
@@ -157,6 +165,7 @@ export default function OutfitDay() {
 
   function toggleAccessory(item: Clothing) {
     resetSavedState();
+    setComposed(true);
     setRationale(null);
     setAccessoryIds((previous) =>
       previous.includes(item.id) ? previous.filter((id) => id !== item.id) : [...previous, item.id]
@@ -187,6 +196,7 @@ export default function OutfitDay() {
 
   function cycle(category: ClothingCategory, direction: 1 | -1) {
     resetSavedState();
+    setComposed(true);
     setRationale(null);
     setIdx((previous) => {
       const list = buckets[category];
@@ -201,6 +211,7 @@ export default function OutfitDay() {
 
   function shuffle() {
     resetSavedState();
+    setComposed(true);
     setRationale(null);
     const pick = (category: ClothingCategory, optional = false) => {
       const count = buckets[category].length;
@@ -223,6 +234,7 @@ export default function OutfitDay() {
 
   /** Points each slot at the garments the stylist picked. */
   function applyOutfitIds(ids: string[]) {
+    setComposed(true);
     setIdx((previous) => {
       const next: Indices = { ...previous, jacket: -1 };
       const wearable: ClothingCategory[] = OUTFIT_ORDER;
@@ -394,6 +406,7 @@ export default function OutfitDay() {
             </Text>
           </View>
 
+          {composed || locked ? (
           <OutfitStudio
             current={current}
             counts={counts}
@@ -404,6 +417,9 @@ export default function OutfitDay() {
             onPrevious={(category) => cycle(category, -1)}
             onNext={(category) => cycle(category, 1)}
           />
+          ) : (
+            <StartCard />
+          )}
 
           {rationale && !locked ? (
             <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md,
@@ -634,6 +650,33 @@ function OccasionPicker({ value, onChange }: { value: Occasion; onChange: (next:
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** Before anything is generated: the companion waiting, not a random outfit. */
+function StartCard() {
+  const { colors } = useTheme();
+  const { t } = useLocale();
+  const { kind } = useCompanion();
+  return (
+    <View
+      style={{
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        paddingVertical: spacing.xl,
+        paddingHorizontal: spacing.lg,
+        alignItems: 'center',
+        gap: spacing.sm,
+      }}
+    >
+      {kind ? <CompanionAvatar kind={kind} size={140} /> : null}
+      <Text style={[typography.h3, { color: colors.text, textAlign: 'center' }]}>{t('outfitDay.startTitle')}</Text>
+      <Text style={[typography.small, { color: colors.textMuted, textAlign: 'center' }]}>
+        {t('outfitDay.startBody')}
+      </Text>
     </View>
   );
 }

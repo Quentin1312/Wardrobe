@@ -85,7 +85,11 @@ export default function Today() {
         }))
       );
       if (error) {
-        setWeekError(error === 'not_enough_items' ? t('today.tooFewBody') : t('week.generateError'));
+        setWeekError(
+          error === 'not_enough_items'
+            ? t('today.tooFewBody')
+            : `${t('week.generateError')} (${error})`
+        );
         return;
       }
       setWeekOutfits(outfits);

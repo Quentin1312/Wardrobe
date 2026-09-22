@@ -227,6 +227,7 @@ ${outputShape}`;
       body: JSON.stringify({
         model: GROQ_MODEL,
         temperature: 0.35,
+        max_completion_tokens: 4000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: 'Tu réponds uniquement en JSON valide.' },
@@ -267,12 +268,41 @@ ${outputShape}`;
           counts[3] <= 1 && counts[4] <= 1 && counts.reduce((sum, n) => sum + n, 0) === o.clothes_ids.length;
       });
 
-    const uniqueSuggestions = isWeek
+    let uniqueSuggestions = isWeek
       ? suggestions.filter(
           (suggestion, index, all) =>
             all.findIndex((candidate) => candidate.planned_for === suggestion.planned_for) === index
         )
       : suggestions.slice(0, Math.min(Number(count) || 3, 7));
+
+    if (isWeek) {
+      // A week must come back complete: days the model skipped or botched are
+      // filled from the wardrobe, rotating pieces so they don't repeat.
+      const pool = (category: string) => items.filter((c) => c.category === category);
+      const tops = pool('top');
+      const bottoms = pool('bottom');
+      const shoes = pool('shoes');
+      if (tops.length && bottoms.length && shoes.length) {
+        const missing = weekDays
+          .map((day) => day.date)
+          .filter((date) => !uniqueSuggestions.some((s) => s.planned_for === date));
+        uniqueSuggestions = [
+          ...uniqueSuggestions,
+          ...missing.map((date, i) => {
+            const offset = weekDays.findIndex((day) => day.date === date) + i;
+            return {
+              planned_for: date,
+              clothes_ids: [
+                tops[offset % tops.length].id,
+                bottoms[offset % bottoms.length].id,
+                shoes[offset % shoes.length].id,
+              ],
+              rationale: 'Tenue simple composée dans ta garde-robe pour ce jour.',
+            };
+          }),
+        ].sort((a, b) => (a.planned_for ?? '').localeCompare(b.planned_for ?? ''));
+      }
+    }
 
     if (uniqueSuggestions.length === 0) {
       return json({ error: 'no_valid_outfit', outfits: [] }, 200);
