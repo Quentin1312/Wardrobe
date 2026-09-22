@@ -127,6 +127,7 @@ export function OutfitStudio({
           onPrevious={() => onPrevious('shoes')}
           onNext={() => onNext('shoes')}
           labelLines={1}
+          arrowBias={16}
         >
           {(frame) => <FittedGarment item={current('shoes')} frame={frame} widthRatio={WIDTH.shoes} />}
         </Row>
@@ -224,6 +225,7 @@ function Row({
   onNext,
   overlay,
   labelLines = 2,
+  arrowBias = 0,
   children,
 }: {
   height: number;
@@ -235,6 +237,8 @@ function Row({
   onNext: () => void;
   overlay?: ReactNode;
   labelLines?: number;
+  /** Pushes the arrows down, away from a name on a short row. */
+  arrowBias?: number;
   children: (frame: Frame) => ReactNode;
 }) {
   const { t } = useLocale();
@@ -246,8 +250,8 @@ function Row({
       {overlay}
       {locked ? null : (
         <>
-          <Arrow side="left" disabled={!canCycle} onPress={onPrevious} />
-          <Arrow side="right" disabled={!canCycle} onPress={onNext} />
+          <Arrow side="left" disabled={!canCycle} bias={arrowBias} onPress={onPrevious} />
+          <Arrow side="right" disabled={!canCycle} bias={arrowBias} onPress={onNext} />
         </>
       )}
     </View>
@@ -582,10 +586,12 @@ function clampTo(r: { left: number; top: number; width: number; height: number }
 function Arrow({
   side,
   disabled,
+  bias = 0,
   onPress,
 }: {
   side: 'left' | 'right';
   disabled: boolean;
+  bias?: number;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
@@ -599,7 +605,7 @@ function Arrow({
         position: 'absolute',
         [side]: 6,
         top: '50%',
-        marginTop: -21,
+        marginTop: -21 + bias,
         width: 42,
         height: 42,
         borderRadius: 21,

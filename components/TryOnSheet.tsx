@@ -18,6 +18,7 @@ export function TryOnSheet({
   items,
   onClose,
   onGenerate,
+  onWear,
   onAddPhoto,
 }: {
   visible: boolean;
@@ -26,6 +27,8 @@ export function TryOnSheet({
   items: Clothing[];
   onClose: () => void;
   onGenerate: () => Promise<TryOnResponse>;
+  /** Validates the look as worn today, from the try-on itself. */
+  onWear?: () => void;
   /** Opens the try-on photo screen when the user has none yet. */
   onAddPhoto?: () => void;
 }) {
@@ -144,6 +147,23 @@ export function TryOnSheet({
                   />
                 </Animated.View>
                 <Verdict result={result} />
+                {onWear ? (
+                  <Pressable
+                    onPress={onWear}
+                    style={({ pressed }) => ({
+                      minHeight: 56,
+                      borderRadius: radius.full,
+                      backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: spacing.sm,
+                    })}
+                  >
+                    <Ionicons name="checkmark" size={19} color={colors.primaryText} />
+                    <Text style={[typography.button, { color: colors.primaryText }]}>{t('tryon.wear')}</Text>
+                  </Pressable>
+                ) : null}
                 <Pressable
                   onPress={generate}
                   style={({ pressed }) => ({

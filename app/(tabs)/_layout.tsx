@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Tabs } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StudioBadge } from '@/components/StudioBadge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,8 +10,34 @@ import { fonts } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 
+const LAST_TAB_KEY = 'wardrobe.lastTab';
+const TAB_ROUTES = ['index', 'outfit', 'wardrobe', 'profile'] as const;
+
 export default function TabsLayout() {
   const { t } = useLocale();
+  const router = useRouter();
+  const segments = useSegments();
+  const currentTab = segments[segments.length - 1];
+  const restored = useRef(false);
+
+  // Coming back to the app should land where you left it, not on Today.
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    AsyncStorage.getItem(LAST_TAB_KEY)
+      .then((last) => {
+        if (last && last !== 'index' && (TAB_ROUTES as readonly string[]).includes(last)) {
+          router.replace(`/${last}` as never);
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
+  useEffect(() => {
+    if (currentTab && (TAB_ROUTES as readonly string[]).includes(currentTab)) {
+      void AsyncStorage.setItem(LAST_TAB_KEY, currentTab).catch(() => {});
+    }
+  }, [currentTab]);
   const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
 

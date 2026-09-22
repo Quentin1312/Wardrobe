@@ -651,6 +651,10 @@ export default function OutfitDay() {
         items={tryOnItems}
         onClose={() => setTryOnOpen(false)}
         onGenerate={runTryOn}
+        onWear={() => {
+          setTryOnOpen(false);
+          void validate();
+        }}
         onAddPhoto={() => {
           setTryOnOpen(false);
           router.push('/body-photo');
