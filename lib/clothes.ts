@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { prefetchClothingImages } from '@/lib/images';
 import type { Clothing, ClothingCategory } from '@/lib/types';
+import type { GarmentColor } from '@/lib/garmentMeta';
+import type { Locale } from '@/lib/i18n';
 
 const CACHE_TTL_MS = 45_000;
 const clothesCache = new Map<string, { at: number; items: Clothing[] }>();
@@ -122,11 +124,30 @@ export async function setClothingColor(id: string, hex: string): Promise<void> {
 
 export async function updateClothingStyling(
   id: string,
-  values: Pick<Clothing, 'category' | 'dominant_color' | 'style_tags'>
+  values: Pick<Clothing, 'category' | 'dominant_color' | 'style_tags'> & Partial<Pick<Clothing, 'name'>>
 ): Promise<void> {
   const { error } = await supabase.from('clothes').update(values).eq('id', id);
   if (error) throw error;
   invalidateClothesCache();
+}
+
+export async function analyzeClothing(id: string, locale: Locale): Promise<{
+  suggestion?: { name: string; category: ClothingCategory; colors: GarmentColor[]; description: string };
+  error?: string;
+}> {
+  const { data, error } = await supabase.functions.invoke('analyze-clothing', {
+    body: { clothingId: id, locale },
+  });
+  if (error) {
+    let detail = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) detail = body.error;
+    } catch { /* keep generic error */ }
+    return { error: detail };
+  }
+  if (data?.error) return { error: data.error };
+  return { suggestion: data };
 }
 
 export async function setClothingDirty(id: string, dirty: boolean): Promise<void> {
