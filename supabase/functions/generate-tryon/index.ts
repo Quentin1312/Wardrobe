@@ -47,6 +47,8 @@ interface Verdict {
   garments: { index: number; ok: boolean; problem?: string }[];
   person_ok: boolean;
   person_problem?: string;
+  /** Garment the model added on its own (a jacket nobody asked for). */
+  extra?: string;
 }
 
 interface Attempt {
@@ -114,6 +116,18 @@ function describe(g: ClothingRow, index: number): string {
   return `- Image ${index}: ${parts.join(', ')}`;
 }
 
+/** Spells out the layers that are NOT part of this look. */
+function missingLayers(garments: ClothingRow[]): string {
+  const has = (category: Category) => garments.some((g) => g.category === category);
+  const missing = [
+    has('jacket') ? null : 'no jacket, coat, overshirt or blazer',
+    has('mid') ? null : 'no jumper, sweatshirt or hoodie',
+    has('accessory') ? null : 'no hat, cap or glasses',
+  ].filter(Boolean);
+  if (missing.length === 0) return '';
+  return `This look has exactly ${garments.length} garment(s): ${missing.join(', ')}. The person wears nothing else.`;
+}
+
 function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
   const hasShoes = garments.some((g) => g.category === 'shoes');
   return [
@@ -129,6 +143,7 @@ function tryOnPrompt(garments: ClothingRow[], fixes: string[]): string {
     garments.some((g) => g.category === 'accessory')
       ? 'Accessories listed here are worn on the head or face (cap, hat, beanie, glasses): place each one naturally, the right way round and at the right size, without hiding the face. Glasses go on the eyes, a cap or hat on the head — both can be worn together.'
       : '',
+    missingLayers(garments),
     'THE PERSON MUST STAY THE SAME: same face and identity, same hairstyle and hair colour, same skin tone, same body shape and height. Do not beautify, slim or age them.',
     fixes.length ? `A previous attempt had these problems, fix them precisely: ${fixes.join(' ; ')}` : '',
   ]
@@ -247,7 +262,8 @@ async function judge(
           'Reference photos are amateur shots: wrinkled, on a hanger, open, badly lit. Being worn changes how a garment looks. So IGNORE: wrinkles vs smooth, buttoned vs open, tucked or not, drape and fit, brightness/exposure/white balance, shadows, viewing angle, labels or tags.',
           'Flag ONLY identity changes: a clearly different colour (e.g. navy became black, beige became white), a pattern/print/stripes/logo/text added, removed or changed, a different garment type, clearly different length or sleeve length, a different collar or neckline, or the garment missing.',
           'Also check the person: same face/identity, hair, skin tone and body shape as image 1.',
-          'When unsure, answer ok. Answer ONLY with JSON: {"garments":[{"index":2,"ok":true,"problem":""}],"person_ok":true,"person_problem":""}. Each problem: one short sentence in French (max 12 words).',
+          'Finally, look for a garment that was ADDED: any jacket, jumper, hoodie, hat or glasses that is not one of the references above. Name it in "extra" (in French), or leave "extra" empty.',
+          'When unsure, answer ok. Answer ONLY with JSON: {"garments":[{"index":2,"ok":true,"problem":""}],"person_ok":true,"person_problem":"","extra":""}. Each problem: one short sentence in French (max 12 words).',
         ].join('\n'),
       },
       { type: 'image_url', image_url: { url: personUrl } },
@@ -287,6 +303,7 @@ function problemsOf(verdict: Verdict, garments: ClothingRow[]): string[] {
     out.push(`${label} : ${g.problem || 'différent de la photo'}`);
   }
   if (!verdict.person_ok) out.push(`visage / silhouette : ${verdict.person_problem || 'modifié'}`);
+  if (verdict.extra) out.push(`pièce ajoutée par l'IA : ${verdict.extra}`);
   return out;
 }
 

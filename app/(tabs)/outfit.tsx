@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
@@ -72,6 +72,8 @@ export default function OutfitDay() {
   const [occasion, setOccasion] = useState<Occasion>('daily');
   // Nothing is shown until the user asks for a look (or one was saved today).
   const [composed, setComposed] = useState(false);
+  /** What is on screen right now, so coming back to the tab doesn't wipe it. */
+  const onScreenIds = useRef<string[]>([]);
   const [styling, setStyling] = useState(false);
   const [styleMsg, setStyleMsg] = useState<string | null>(null);
   const [styled, setStyled] = useState(false);
@@ -92,11 +94,19 @@ export default function OutfitDay() {
       // Dirty laundry is not wearable today.
       for (const item of items) if (item.category && !item.dirty) next[item.category].push(item);
       setBuckets(next);
-      setIdx(INITIAL_INDICES);
-      setAccessoryIds([]);
+      const stillThere = onScreenIds.current.filter((id) => items.some((piece) => piece.id === id && !piece.dirty));
+      // Coming back to the tab: keep the look that is already on screen.
+      const keepOnScreen = stillThere.length > 0 && stillThere.length === onScreenIds.current.length;
+      if (keepOnScreen) {
+        setIdx(indicesForIds(next, stillThere));
+        setAccessoryIds(next.accessory.filter((piece) => stillThere.includes(piece.id)).map((piece) => piece.id));
+      } else {
+        setIdx(INITIAL_INDICES);
+        setAccessoryIds([]);
+        setRationale(null);
+      }
       setSaved(false);
       setSavedOutfitId(null);
-      setRationale(null);
 
       // A look validated today locks the studio until the user changes it.
       try {
@@ -110,7 +120,7 @@ export default function OutfitDay() {
           setSavedOutfitId(worn.id);
         } else {
           setLocked(null);
-          let restored = false;
+          let restored = keepOnScreen;
           try {
             const raw = await AsyncStorage.getItem(draftKey(userId));
             if (raw) {
@@ -195,9 +205,10 @@ export default function OutfitDay() {
   useEffect(() => {
     if (!draftReady || !userId || locked || !hasRequired) return;
     const ids = selectedIds();
-    if (!validLook(ids, Object.values(buckets).flat())) return;
+    onScreenIds.current = composed ? ids : [];
+    if (!composed || !validLook(ids, Object.values(buckets).flat())) return;
     void AsyncStorage.setItem(draftKey(userId), JSON.stringify({ ids, rationale }));
-  }, [draftReady, userId, locked, hasRequired, idx, accessoryIds, buckets, rationale, selectedIds]);
+  }, [draftReady, userId, locked, hasRequired, composed, idx, accessoryIds, buckets, rationale, selectedIds]);
 
   function resetSavedState() {
     setSaved(false);
