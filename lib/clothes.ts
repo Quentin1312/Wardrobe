@@ -87,6 +87,33 @@ export async function setClothingFavorite(id: string, favorite: boolean): Promis
   invalidateClothesCache();
 }
 
+/** Makes a studio render (or any image) the piece's display photo. */
+export async function setClothingCleanPhoto(id: string, url: string): Promise<void> {
+  const { error } = await supabase.from('clothes').update({ photo_clean_url: url }).eq('id', id);
+  if (error) throw error;
+  invalidateClothesCache();
+}
+
+/**
+ * Asks the AI studio for a clean packshot of the piece. Returns a candidate
+ * URL; nothing changes in the wardrobe until setClothingCleanPhoto is called.
+ */
+export async function generateStudioPhoto(clothingId: string): Promise<{ url?: string; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('studio-photo', { body: { clothingId } });
+  if (error) {
+    let detail = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) detail = body.error;
+    } catch {
+      // keep generic
+    }
+    return { error: detail };
+  }
+  if (data?.error) return { error: data.error };
+  return { url: data?.url as string };
+}
+
 export async function setClothingColor(id: string, hex: string): Promise<void> {
   const { error } = await supabase.from('clothes').update({ dominant_color: hex }).eq('id', id);
   if (error) throw error;

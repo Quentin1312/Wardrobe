@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LaundryDrop } from '@/components/LaundryDrop';
+import { StudioSheet } from '@/components/StudioSheet';
 import { categoryKey } from '@/constants/categories';
 import { colorName } from '@/lib/color';
 import { radius, spacing, typography } from '@/constants/theme';
@@ -42,6 +43,7 @@ export default function ItemSheet() {
   const [msg, setMsg] = useState<string | null>(null);
   const [nameSaved, setNameSaved] = useState(false);
   const [showBasket, setShowBasket] = useState(false);
+  const [showStudio, setShowStudio] = useState(false);
   const [wear, setWear] = useState<WearStat | undefined>(undefined);
   const [wearLoaded, setWearLoaded] = useState(false);
 
@@ -333,9 +335,17 @@ export default function ItemSheet() {
           ) : (
             <ActionRow icon="cut-outline" label={t('wardrobe.removeBg')} onPress={onDetour} />
           )}
+          <ActionRow icon="color-wand-outline" label={t('studio.action')} onPress={() => setShowStudio(true)} />
           <ActionRow icon="trash-outline" label={t('common.delete')} onPress={onDelete} danger />
         </View>
       </ScrollView>
+
+      <StudioSheet
+        visible={showStudio}
+        item={item}
+        onClose={() => setShowStudio(false)}
+        onKept={(url) => setItem({ ...item, photo_clean_url: url })}
+      />
 
       <LaundryDrop
         visible={showBasket}

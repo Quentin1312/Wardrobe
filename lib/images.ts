@@ -44,7 +44,8 @@ export async function optimizeLegacyCleanPhotos(
 ): Promise<void> {
   for (const item of items) {
     const source = item.photo_clean_url;
-    if (!source || /-(?:clean|display)\.webp(?:\?|$)/i.test(source) || optimizedThisSession.has(item.id)) {
+    // Studio renders are already compact WebP files with their own unique name.
+    if (!source || /-(?:clean|display|studio-\d+)\.webp(?:\?|$)/i.test(source) || optimizedThisSession.has(item.id)) {
       continue;
     }
     optimizedThisSession.add(item.id);
