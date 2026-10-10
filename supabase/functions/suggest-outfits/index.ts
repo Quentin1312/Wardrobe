@@ -184,14 +184,21 @@ Deno.serve(async (req) => {
     };
     const occasionLine = OCCASIONS[String(occasion)] ?? '';
 
+    type Day = { date: string; weather?: { temp: number; condition: string } | null };
+    const dayList = (days: Day[]) =>
+      days
+        .map((day) => `- ${day.date} : ${day.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : 'météo inconnue'}`)
+        .join('\n');
+
+    const weekAssignment = (days: Day[]) =>
+      `Planifie exactement une tenue pour chacun de ces jours :\n${dayList(days)}\n\nDiversifie quand la garde-robe le permet. Si elle est petite, réutilise les mêmes pièces en variant les associations : mieux vaut des répétitions qu'une semaine incomplète. Renvoie TOUJOURS une tenue par jour demandé, et garde chaque justification sous 10 mots.`;
+
     const assignment = isWeek
-      ? `Planifie exactement une tenue pour chacun de ces jours :\n${weekDays
-          .map((day) => `- ${day.date} : ${day.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : 'météo inconnue'}`)
-          .join('\n')}\n\nDiversifie la semaine quand la garde-robe le permet. Si elle est petite, réutilise les mêmes pièces sans hésiter en variant les associations : mieux vaut sept tenues avec des répétitions qu'une semaine incomplète. Renvoie TOUJOURS une tenue pour chacun des jours demandés.`
+      ? weekAssignment(weekDays)
       : `Météo du jour : ${weatherLine}.\n\nCompose ${Math.min(Number(count) || 3, 7)} tenues cohérentes et adaptées à la météo.`;
 
     const outputShape = isWeek
-      ? '{"outfits":[{"planned_for":"YYYY-MM-DD","clothes_ids":["id1","id2"],"rationale":"courte explication en français"}]}'
+      ? '{"outfits":[{"planned_for":"YYYY-MM-DD","clothes_ids":["id1","id2"],"rationale":"justification courte"}]}'
       : '{"outfits":[{"clothes_ids":["id1","id2"],"rationale":"courte explication en français"}]}';
 
     const prompt = `Tu es un styliste. Voici la garde-robe d'un utilisateur :
@@ -230,36 +237,53 @@ quand une alternative cohérente existe, et remets en avant les pièces oubliée
 Réponds STRICTEMENT en JSON avec ce format :
 ${outputShape}`;
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0.35,
-        max_completion_tokens: 4000,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: 'Tu réponds uniquement en JSON valide.' },
-          { role: 'user', content: prompt },
-        ],
-      }),
-    });
+    type Suggestion = { planned_for?: string; clothes_ids: string[]; rationale?: string };
 
-    if (!groqRes.ok) {
-      const text = await groqRes.text();
-      return json({ error: `Groq error: ${text}` }, 502);
+    /** One Groq round. Returns the outfits it managed to produce, or the error. */
+    async function askGroq(body: string): Promise<{ outfits: Suggestion[]; error?: string }> {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          temperature: 0.35,
+          // Seven looks plus the model's own reasoning need plenty of room;
+          // "low" keeps that reasoning short so the JSON always fits.
+          max_completion_tokens: 8000,
+          reasoning_effort: 'low',
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: 'Tu réponds uniquement en JSON valide.' },
+            { role: 'user', content: body },
+          ],
+        }),
+      });
+      if (!res.ok) return { outfits: [], error: `Groq error: ${await res.text()}` };
+      const data = await res.json();
+      try {
+        const out = JSON.parse(data.choices?.[0]?.message?.content ?? '{}');
+        return { outfits: Array.isArray(out.outfits) ? out.outfits : [] };
+      } catch {
+        return { outfits: [], error: 'Réponse IA illisible' };
+      }
     }
 
-    const groqData = await groqRes.json();
-    const content = groqData.choices?.[0]?.message?.content ?? '{}';
-    let parsed: { outfits?: { planned_for?: string; clothes_ids: string[]; rationale?: string }[] };
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      return json({ error: 'Réponse IA illisible', outfits: [] }, 502);
+    let parsed: { outfits?: Suggestion[] } = { outfits: [] };
+    let groqError: string | undefined;
+
+    const round = await askGroq(prompt);
+    if (isWeek) {
+      // A failed week is never fatal: whatever came back is kept and the days
+      // the model skipped are filled from the wardrobe further down.
+      parsed = { outfits: round.outfits };
+      groqError = round.error;
+      if (groqError) console.error('week generation partial', groqError);
+    } else {
+      if (round.error) return json({ error: round.error }, 502);
+      parsed = { outfits: round.outfits };
     }
 
     const byCategory = new Map(items.map((i) => [i.id, i.category]));
@@ -318,7 +342,7 @@ ${outputShape}`;
     }
 
     if (uniqueSuggestions.length === 0) {
-      return json({ error: 'no_valid_outfit', outfits: [] }, 200);
+      return json({ error: groqError ?? 'no_valid_outfit', outfits: [] }, 200);
     }
 
     if (isWeek) {
