@@ -169,3 +169,23 @@ export async function clothesMap(userId: string): Promise<Map<string, Clothing>>
   for (const c of (data as Clothing[]) ?? []) map.set(c.id, c);
   return map;
 }
+
+/** Looks actually worn during a period, newest first (history screen). */
+export async function fetchWornOutfits(userId: string, from: Date, to: Date): Promise<Outfit[]> {
+  const { data, error } = await supabase
+    .from('outfits')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('liked', true)
+    .gte('generated_at', from.toISOString())
+    .lt('generated_at', to.toISOString())
+    .order('generated_at', { ascending: false });
+  if (error) throw error;
+  return (data as Outfit[]) ?? [];
+}
+
+/** Hearts a worn look so the stylist leans towards that kind of outfit. */
+export async function setOutfitFavorite(id: string, favorite: boolean): Promise<void> {
+  const { error } = await supabase.from('outfits').update({ favorite }).eq('id', id);
+  if (error) throw error;
+}

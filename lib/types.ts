@@ -44,6 +44,8 @@ export interface Outfit {
   planned_for: string | null; // YYYY-MM-DD when this look belongs to a weekly plan
   plan_scope: 'day' | 'week';
   rationale: string | null;
+  /** The user hearted this look: the stylist should lean that way. */
+  favorite?: boolean;
 }
 
 export interface TryonResult {

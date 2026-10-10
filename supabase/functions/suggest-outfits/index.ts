@@ -159,24 +159,29 @@ Deno.serve(async (req) => {
         .join(' + ');
     const { data: history } = await supabase
       .from('outfits')
-      .select('clothes_ids, liked')
+      .select('clothes_ids, liked, favorite')
       .eq('user_id', userId)
       .not('liked', 'is', null)
       .order('generated_at', { ascending: false })
       .limit(40);
-    const pick = (liked: boolean, max: number) =>
+    const pick = (keep: (o: { liked: boolean | null; favorite?: boolean }) => boolean, max: number) =>
       (history ?? [])
-        .filter((o) => o.liked === liked)
+        .filter(keep)
         .map((o) => describe(o.clothes_ids))
         .filter(Boolean)
         .slice(0, max);
-    const loved = pick(true, 10);
-    const refused = pick(false, 6);
+    // Hearted looks are the strongest signal: the user said "more of this".
+    const hearted = pick((o) => o.favorite === true, 8);
+    const loved = pick((o) => o.liked === true && o.favorite !== true, 10);
+    const refused = pick((o) => o.liked === false, 6);
     const tasteParts: string[] = [];
-    if (loved.length) tasteParts.push(`Tenues aimées ou portées :\n${loved.map((l) => `- ${l}`).join('\n')}`);
+    if (hearted.length) {
+      tasteParts.push(`Tenues PRÉFÉRÉES (l'utilisateur leur a mis un cœur) :\n${hearted.map((l) => `- ${l}`).join('\n')}`);
+    }
+    if (loved.length) tasteParts.push(`Tenues portées :\n${loved.map((l) => `- ${l}`).join('\n')}`);
     if (refused.length) tasteParts.push(`Tenues refusées :\n${refused.map((l) => `- ${l}`).join('\n')}`);
     const taste = tasteParts.length
-      ? `\nGoûts de l'utilisateur (à respecter) :\n${tasteParts.join('\n')}\nInspire-toi des associations aimées (couleurs, styles) sans les recopier à l'identique, et évite ce qui ressemble aux tenues refusées.\n`
+      ? `\nGoûts de l'utilisateur (à respecter) :\n${tasteParts.join('\n')}\nVise d'abord l'esprit des tenues PRÉFÉRÉES (associations, couleurs, niveau de formalité) sans les recopier à l'identique, inspire-toi ensuite des tenues portées, et évite ce qui ressemble aux tenues refusées.\n`
       : '';
 
     // What the look is for, in the stylist's own words.

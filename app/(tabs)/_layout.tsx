@@ -11,7 +11,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 
 const LAST_TAB_KEY = 'wardrobe.lastTab';
-const TAB_ROUTES = ['index', 'outfit', 'wardrobe', 'profile'] as const;
+const TAB_ROUTES = ['index', 'outfit', 'wardrobe', 'history', 'profile'] as const;
 
 export default function TabsLayout() {
   const { t } = useLocale();
@@ -118,6 +118,15 @@ export default function TabsLayout() {
           title: t('tabs.wardrobe'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="shirt-outline" color={color} size={size - 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: t('tabs.history'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart-outline" color={color} size={size - 2} />
           ),
         }}
       />
