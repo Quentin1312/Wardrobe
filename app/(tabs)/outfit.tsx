@@ -294,7 +294,7 @@ export default function OutfitDay() {
             max: todayForecast ? Math.max(todayForecast.max, weather.temp) : weather.temp,
           }
         : null;
-      const { outfits, error } = await generateOutfits(w, occasion);
+      const { outfits, error } = await generateOutfits(w, occasion, locale);
       if (error === 'not_enough_items') {
         setStyleMsg(t('today.tooFewBody'));
       } else if (error === 'empty' || error === 'no_valid_outfit') {

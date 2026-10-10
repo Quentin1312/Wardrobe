@@ -25,10 +25,12 @@ export type Occasion = 'daily' | 'work' | 'party' | 'sport';
 /** Calls the Groq-powered edge function to generate fresh outfit suggestions. */
 export async function generateOutfits(
   weather: { temp: number; condition: string; min?: number; max?: number } | null,
-  occasion: Occasion = 'daily'
+  occasion: Occasion = 'daily',
+  /** The stylist explains itself in the app's language. */
+  locale = 'fr'
 ): Promise<{ outfits: SuggestedOutfit[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke('suggest-outfits', {
-    body: { weather, count: 3, occasion },
+    body: { weather, count: 3, occasion, locale },
   });
 
   // On a non-2xx, supabase-js hides the function's JSON body inside error.context.
@@ -56,10 +58,11 @@ export async function generateOutfits(
 
 /** Generates and persists one dated look per requested day in a single AI call. */
 export async function generateWeeklyOutfits(
-  days: WeekPlanDayInput[]
+  days: WeekPlanDayInput[],
+  locale = 'fr'
 ): Promise<{ outfits: SuggestedOutfit[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke('suggest-outfits', {
-    body: { mode: 'week', days },
+    body: { mode: 'week', days, locale },
   });
   if (error) {
     let detail = error.message;

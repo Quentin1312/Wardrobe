@@ -89,7 +89,8 @@ export default function Today() {
                 max: day.weather.max,
               }
             : null,
-        }))
+        })),
+        locale
       );
       if (error) {
         setWeekError(

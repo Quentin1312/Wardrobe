@@ -86,7 +86,10 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) return json({ error: 'Unauthorized' }, 401);
     const userId = userData.user.id;
 
-    const { weather, count = 3, mode = 'day', days = [], occasion = 'daily' } = await req.json().catch(() => ({}));
+    const { weather, count = 3, mode = 'day', days = [], occasion = 'daily', locale = 'fr' } =
+      await req.json().catch(() => ({}));
+    // The brief stays in French; only what the user reads follows the app.
+    const inEnglish = String(locale).startsWith('en');
 
     const { data: clothes, error: clothesErr } = await supabase
       .from('clothes')
@@ -238,6 +241,7 @@ Fais tourner la garde-robe : évite les pièces portées il y a moins de 3 jours
 quand une alternative cohérente existe, et remets en avant les pièces oubliées
 (portée il y a 30 j ou plus, ou jamais) quand elles vont avec la tenue.
 
+${inEnglish ? 'IMPORTANT : rédige chaque "rationale" en ANGLAIS, pas en français.' : ''}
 Réponds STRICTEMENT en JSON avec ce format :
 ${outputShape}`;
 
@@ -338,7 +342,9 @@ ${outputShape}`;
                 bottoms[offset % bottoms.length].id,
                 shoes[offset % shoes.length].id,
               ],
-              rationale: 'Tenue simple composée dans ta garde-robe pour ce jour.',
+              rationale: inEnglish
+                ? 'A simple look put together from your wardrobe for that day.'
+                : 'Tenue simple composée dans ta garde-robe pour ce jour.',
             };
           }),
         ].sort((a, b) => (a.planned_for ?? '').localeCompare(b.planned_for ?? ''));
