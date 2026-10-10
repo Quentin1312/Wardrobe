@@ -40,13 +40,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
   const [mode, setModeState] = useState<ThemeMode>('system');
 
+  // The switch only offers light and dark: a first launch (or an old 'system'
+  // choice) settles on whatever the phone is using right now.
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((saved) => {
-        if (saved === 'light' || saved === 'dark' || saved === 'system') setModeState(saved);
+        if (saved === 'light' || saved === 'dark') setModeState(saved);
+        else setModeState(system === 'light' ? 'light' : 'dark');
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setModeState(system === 'light' ? 'light' : 'dark'));
+  }, [system]);
 
   const dark = mode === 'system' ? system === 'dark' : mode === 'dark';
 

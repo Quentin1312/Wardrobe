@@ -4,9 +4,7 @@ import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 
-/** The icon tells "auto" apart: that one follows the phone's own setting. */
 const MODES: { key: ThemeMode; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'system', icon: 'phone-portrait-outline' },
   { key: 'light', icon: 'sunny-outline' },
   { key: 'dark', icon: 'moon-outline' },
 ];
