@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,6 +56,8 @@ export default function OutfitDay() {
   const userId = session?.user?.id;
   const { t, locale } = useLocale();
   const router = useRouter();
+  // Opened from the week planner: show that day's planned look, not the draft.
+  const { plan } = useLocalSearchParams<{ plan?: string }>();
   const { state } = useWeather();
   const weather = state.status === 'ready' ? state.weather : null;
   const todayForecast =
@@ -95,8 +97,9 @@ export default function OutfitDay() {
       for (const item of items) if (item.category && !item.dirty) next[item.category].push(item);
       setBuckets(next);
       const stillThere = onScreenIds.current.filter((id) => items.some((piece) => piece.id === id && !piece.dirty));
-      // Coming back to the tab: keep the look that is already on screen.
-      const keepOnScreen = stillThere.length > 0 && stillThere.length === onScreenIds.current.length;
+      // Coming back to the tab: keep the look that is already on screen, unless
+      // the week planner asked for a specific day.
+      const keepOnScreen = !plan && stillThere.length > 0 && stillThere.length === onScreenIds.current.length;
       if (keepOnScreen) {
         setIdx(indicesForIds(next, stillThere));
         setAccessoryIds(next.accessory.filter((piece) => stillThere.includes(piece.id)).map((piece) => piece.id));
@@ -122,7 +125,7 @@ export default function OutfitDay() {
           setLocked(null);
           let restored = keepOnScreen;
           try {
-            const raw = await AsyncStorage.getItem(draftKey(userId));
+            const raw = plan ? null : await AsyncStorage.getItem(draftKey(userId));
             if (raw) {
               const draft = JSON.parse(raw) as { ids: string[]; rationale?: string | null };
               if (validLook(draft.ids, items)) {
@@ -138,7 +141,7 @@ export default function OutfitDay() {
             }
           } catch { /* A corrupt local draft must not block the studio. */ }
           if (!restored) {
-            const [planned] = await fetchWeeklyOutfits(userId, [dateKey(new Date())]);
+            const [planned] = await fetchWeeklyOutfits(userId, [plan || dateKey(new Date())]);
             if (planned && validLook(planned.clothes_ids, items)) {
               setIdx(indicesForIds(next, planned.clothes_ids));
               setComposed(true);
@@ -156,9 +159,14 @@ export default function OutfitDay() {
       setLoading(false);
       setDraftReady(true);
     }
-  }, [userId]);
+  }, [userId, plan]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // The request is one-shot: forget it so the next visit keeps the draft again.
+  useEffect(() => {
+    if (plan && draftReady) router.setParams({ plan: undefined });
+  }, [plan, draftReady, router]);
 
   const hasRequired = REQUIRED.every((category) => buckets[category].length > 0);
 

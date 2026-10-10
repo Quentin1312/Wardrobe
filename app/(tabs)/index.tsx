@@ -15,7 +15,7 @@ import type { Weather } from '@/lib/weather';
 import type { Locale } from '@/lib/i18n';
 import { clothesMap, fetchWeeklyOutfits, generateWeeklyOutfits, type SuggestedOutfit } from '@/lib/outfits';
 import type { Clothing } from '@/lib/types';
-import { nextSevenDays } from '@/lib/week';
+import { dateKey, nextSevenDays } from '@/lib/week';
 
 function greetingKey(): string {
   const h = new Date().getHours();
@@ -239,7 +239,9 @@ export default function Today() {
             error={weekError}
             onSelectDate={setSelectedDate}
             onGenerate={generateWeek}
-            onOpenToday={() => router.push('/(tabs)/outfit')}
+            onOpenToday={() =>
+              router.push({ pathname: '/(tabs)/outfit', params: { plan: dateKey(new Date()) } })
+            }
           />
         )}
       </ScrollView>
