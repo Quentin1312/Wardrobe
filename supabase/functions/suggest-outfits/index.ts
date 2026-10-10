@@ -184,11 +184,15 @@ Deno.serve(async (req) => {
     };
     const occasionLine = OCCASIONS[String(occasion)] ?? '';
 
-    type Day = { date: string; weather?: { temp: number; condition: string } | null };
-    const dayList = (days: Day[]) =>
-      days
-        .map((day) => `- ${day.date} : ${day.weather ? `${day.weather.temp}°C, ${day.weather.condition}` : 'météo inconnue'}`)
-        .join('\n');
+    type Day = { date: string; weather?: { temp: number; condition: string; min?: number; max?: number } | null };
+    const dayLine = (day: Day) => {
+      if (!day.weather) return `- ${day.date} : météo inconnue`;
+      const { temp, condition, min, max } = day.weather;
+      const spread =
+        typeof min === 'number' && typeof max === 'number' && max - min >= 2 ? ` (de ${min}°C à ${max}°C)` : '';
+      return `- ${day.date} : ${temp}°C, ${condition}${spread}`;
+    };
+    const dayList = (days: Day[]) => days.map(dayLine).join('\n');
 
     const weekAssignment = (days: Day[]) =>
       `Planifie exactement une tenue pour chacun de ces jours :\n${dayList(days)}\n\nDiversifie quand la garde-robe le permet. Si elle est petite, réutilise les mêmes pièces en variant les associations : mieux vaut des répétitions qu'une semaine incomplète. Renvoie TOUJOURS une tenue par jour demandé, et garde chaque justification sous 10 mots.`;

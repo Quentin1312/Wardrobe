@@ -5,7 +5,14 @@ export interface WeekDay {
   date: string;
   dayLabel: string;
   dateLabel: string;
-  weather: { temp: number; condition: string; icon: Weather['icon'] } | null;
+  weather: {
+    temp: number;
+    condition: string;
+    icon: Weather['icon'];
+    /** The day's range, so the stylist can layer for the morning. */
+    min?: number;
+    max?: number;
+  } | null;
 }
 
 export function dateKey(date: Date): string {
@@ -30,9 +37,15 @@ export function nextSevenDays(
     const key = dateKey(date);
     const daily = forecastByDate.get(key);
     const weather = index === 0 && current
-      ? { temp: current.temp, condition: current.condition, icon: current.icon }
+      ? {
+          temp: current.temp,
+          condition: current.condition,
+          icon: current.icon,
+          min: daily ? Math.min(daily.min, current.temp) : current.temp,
+          max: daily ? Math.max(daily.max, current.temp) : current.temp,
+        }
       : daily
-        ? { temp: daily.temp, condition: daily.condition, icon: daily.icon }
+        ? { temp: daily.temp, condition: daily.condition, icon: daily.icon, min: daily.min, max: daily.max }
         : null;
 
     return {

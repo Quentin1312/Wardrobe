@@ -81,7 +81,14 @@ export default function Today() {
       const { outfits, error } = await generateWeeklyOutfits(
         weekDays.map((day) => ({
           date: day.date,
-          weather: day.weather ? { temp: day.weather.temp, condition: day.weather.condition } : null,
+          weather: day.weather
+            ? {
+                temp: day.weather.temp,
+                condition: day.weather.condition,
+                min: day.weather.min,
+                max: day.weather.max,
+              }
+            : null,
         }))
       );
       if (error) {

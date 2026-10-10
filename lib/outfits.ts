@@ -16,7 +16,7 @@ export function validLook(ids: string[], clothes: Clothing[]): boolean {
 
 export interface WeekPlanDayInput {
   date: string;
-  weather: { temp: number; condition: string } | null;
+  weather: { temp: number; condition: string; min?: number; max?: number } | null;
 }
 
 /** What the day calls for; the stylist dresses accordingly. */
