@@ -1,0 +1,29 @@
+{
+  "name": "Wardrobe",
+  "short_name": "Wardrobe",
+  "lang": "fr",
+  "start_url": "/Wardrobe/",
+  "scope": "/Wardrobe/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0C",
+  "theme_color": "#0B0B0C",
+  "icons": [
+    {
+      "src": "/Wardrobe/wardrobe-apple-touch-icon-v2.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/Wardrobe/wardrobe-icon-v2.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    },
+    {
+      "src": "/Wardrobe/wardrobe-icon-v2.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
