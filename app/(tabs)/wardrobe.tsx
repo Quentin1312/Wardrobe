@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { cleanMissingBackgrounds, fetchClothes, fetchClothing, updateClothingStyling, washAll } from '@/lib/clothes';
 import { colorName, extractGarmentPalette } from '@/lib/color';
-import { colorsFromHexes, primaryColorHex, readGarmentMeta, writeGarmentMeta } from '@/lib/garmentMeta';
+import { colorsFromHexes, colorsLabel, primaryColorHex, readGarmentMeta, writeGarmentMeta } from '@/lib/garmentMeta';
 import { clothingImageUri, optimizeLegacyCleanPhotos } from '@/lib/images';
 import type { Clothing, ClothingCategory } from '@/lib/types';
 import { FORGOTTEN_DAYS, fetchWearStats, isForgotten, wornLabel, type WearStat } from '@/lib/wear';
@@ -557,7 +557,7 @@ function ClothingCard({
           <Text numberOfLines={1} style={[typography.caption, { color: colors.textMuted, flexShrink: 1 }]}>
             {t(categoryKey(item.category))}
             {readGarmentMeta(item).colors.length
-              ? ` · ${readGarmentMeta(item).colors.join(' + ')}`
+              ? ` · ${colorsLabel(readGarmentMeta(item).colors, locale)}`
               : item.dominant_color ? ` · ${colorName(item.dominant_color, locale) ?? ''}` : ''}
           </Text>
         </View>

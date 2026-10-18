@@ -16,7 +16,7 @@ import { GarmentStylingFields } from '@/components/GarmentStylingFields';
 import { StudioSheet } from '@/components/StudioSheet';
 import { CATEGORIES, categoryKey } from '@/constants/categories';
 import { extractGarmentPalette } from '@/lib/color';
-import { colorsFromHexes, primaryColorHex, readGarmentMeta, writeGarmentMeta, type GarmentColor } from '@/lib/garmentMeta';
+import { colorsFromHexes, colorsLabel, primaryColorHex, readGarmentMeta, writeGarmentMeta, type GarmentColor } from '@/lib/garmentMeta';
 import { radius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -317,7 +317,7 @@ export default function ItemSheet() {
           {garmentColors.length ? (
             <Row
               label={t('item.color')}
-              value={garmentColors.join(' + ')}
+              value={colorsLabel(garmentColors, locale)}
               swatch={primaryColorHex(garmentColors) ?? undefined}
             />
           ) : null}

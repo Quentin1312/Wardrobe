@@ -1,4 +1,5 @@
 import { colorName } from '@/lib/color';
+import type { Locale } from '@/lib/i18n';
 import type { Clothing } from '@/lib/types';
 
 export const COLOR_CHOICES = [
@@ -32,6 +33,17 @@ export function colorsFromHexes(hexes: string[]): GarmentColor[] {
   return [...new Set(hexes.map((hex) => colorName(hex, 'fr')))]
     .filter((name): name is GarmentColor => COLOR_CHOICES.some((choice) => choice.name === name))
     .slice(0, 3);
+}
+
+/**
+ * Colour names are stored in French (they are the catalogue's keys, and the
+ * stylist is briefed in French), so anything shown to the user goes through
+ * here instead of printing the stored value.
+ */
+export function colorsLabel(colors: GarmentColor[], locale: Locale): string {
+  return colors
+    .map((name) => (locale === 'fr' ? name : COLOR_CHOICES.find((choice) => choice.name === name)?.en ?? name))
+    .join(' + ');
 }
 
 export function readGarmentMeta(item: Pick<Clothing, 'style_tags' | 'dominant_color'>): {
