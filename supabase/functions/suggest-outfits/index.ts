@@ -140,12 +140,19 @@ Deno.serve(async (req) => {
       return d === 0 ? "aujourd'hui" : `il y a ${d} j`;
     };
 
+    // The stylist needs the gist of each piece, not an essay: the quota counts
+    // every word, and 30 pieces of free text is what blew past it.
+    const brief = (tags: string[] | null) =>
+      (tags ?? [])
+        .map((tag) => (tag.startsWith('description:') ? `description:${tag.slice(12).slice(0, 110)}` : tag))
+        .join(' ; ');
+
     const catalog = items
       .map(
         (c) =>
           `- id:${c.id} | ${c.name ? `nom:"${c.name}" | ` : ''}catégorie:${c.category ?? '?'} | couleur:${
             colorFr(c.dominant_color) ?? '?'
-          } | fiche détaillée:${(c.style_tags ?? []).join(' ; ') || '-'} | portée:${wornText(c.id)}`
+          } | fiche détaillée:${brief(c.style_tags) || '-'} | portée:${wornText(c.id)}`
       )
       .join('\n');
 
@@ -253,7 +260,7 @@ ${outputShape}`;
     type Suggestion = { planned_for?: string; clothes_ids: string[]; rationale?: string };
 
     /** One Groq round. Returns the outfits it managed to produce, or the error. */
-    async function askGroq(body: string): Promise<{ outfits: Suggestion[]; error?: string }> {
+    async function askGroq(body: string, maxOut: number): Promise<{ outfits: Suggestion[]; error?: string }> {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -263,9 +270,10 @@ ${outputShape}`;
         body: JSON.stringify({
           model: GROQ_MODEL,
           temperature: 0.35,
-          // Seven looks plus the model's own reasoning need plenty of room;
-          // "low" keeps that reasoning short so the JSON always fits.
-          max_completion_tokens: 8000,
+          // Groq counts the prompt PLUS this reservation against the
+          // per-minute quota, so a huge ceiling fails the request outright.
+          // A week measures ~700 tokens of answer, a day's looks far less.
+          max_completion_tokens: maxOut,
           reasoning_effort: 'low',
           response_format: { type: 'json_object' },
           messages: [
@@ -274,7 +282,19 @@ ${outputShape}`;
           ],
         }),
       });
-      if (!res.ok) return { outfits: [], error: `Groq error: ${await res.text()}` };
+      if (!res.ok) {
+        const raw = await res.text();
+        const busy = res.status === 429 || res.status === 413 || /rate.?limit|too large/i.test(raw);
+        console.error('groq refused', res.status, raw);
+        return {
+          outfits: [],
+          error: busy
+            ? (inEnglish
+                ? 'The stylist is busy right now. Try again in a minute.'
+                : 'Le styliste est saturé. Réessaie dans une minute.')
+            : `Groq error: ${raw}`,
+        };
+      }
       const data = await res.json();
       try {
         const out = JSON.parse(data.choices?.[0]?.message?.content ?? '{}');
@@ -287,7 +307,7 @@ ${outputShape}`;
     let parsed: { outfits?: Suggestion[] } = { outfits: [] };
     let groqError: string | undefined;
 
-    const round = await askGroq(prompt);
+    const round = await askGroq(prompt, isWeek ? 2400 : 1400);
     if (isWeek) {
       // A failed week is never fatal: whatever came back is kept and the days
       // the model skipped are filled from the wardrobe further down.
