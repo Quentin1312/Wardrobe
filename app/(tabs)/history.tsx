@@ -70,7 +70,7 @@ export default function History() {
   const hearted = outfits.filter((outfit) => outfit.favorite).length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         contentContainerStyle={{
           width: '100%',

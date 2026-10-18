@@ -22,8 +22,8 @@ export default function Profile() {
   const photo = profile?.profile_photo_clean_url ?? profile?.profile_photo_url;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', padding: spacing.screen, paddingBottom: 110, gap: spacing.lg }}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.bg }}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', padding: spacing.screen, paddingBottom: 132, gap: spacing.lg }}>
         <Text style={[typography.eyebrow, { color: colors.accent }]}>ACCOUNT / SETTINGS</Text>
         <Text style={[typography.h1, { color: colors.text }]}>{t('profile.title')}</Text>
 

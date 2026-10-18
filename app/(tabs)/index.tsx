@@ -112,7 +112,7 @@ export default function Today() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

@@ -403,7 +403,7 @@ export default function OutfitDay() {
   const profilePhoto = profile?.profile_photo_clean_url ?? profile?.profile_photo_url ?? null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.bg }}>
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.accent} />
