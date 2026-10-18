@@ -144,15 +144,62 @@ Deno.serve(async (req) => {
     // every word, and 30 pieces of free text is what blew past it.
     const brief = (tags: string[] | null) =>
       (tags ?? [])
-        .map((tag) => (tag.startsWith('description:') ? `description:${tag.slice(12).slice(0, 110)}` : tag))
+        .map((tag) => (tag.startsWith('description:') ? `description:${tag.slice(12).slice(0, 90)}` : tag))
         .join(' ; ');
 
-    const catalog = items
+    // The free Groq tier allows 8000 prompt tokens per MINUTE for the whole
+    // account, so a large wardrobe cannot be sent whole. Offer a shortlist per
+    // category, least recently worn first, which also rotates the wardrobe
+    // instead of proposing the same pieces every day.
+    const PER_CATEGORY: Record<string, number> = {
+      top: 10,
+      bottom: 8,
+      shoes: 6,
+      mid: 6,
+      jacket: 6,
+      accessory: 6,
+    };
+    const daysSinceWorn = (c: ClothingRow) => lastWorn.get(c.id) ?? 9999;
+    const groups = new Map<string, ClothingRow[]>();
+    for (const piece of items) {
+      const key = piece.category ?? '?';
+      const list = groups.get(key) ?? [];
+      list.push(piece);
+      groups.set(key, list);
+    }
+    const shortlist: ClothingRow[] = [];
+    for (const [category, list] of groups) {
+      const keep = PER_CATEGORY[category] ?? 8;
+      if (list.length <= keep) {
+        shortlist.push(...list);
+        continue;
+      }
+      const byAge = [...list].sort((a, b) => daysSinceWorn(b) - daysSinceWorn(a));
+      // Mostly forgotten pieces, plus a couple of recent ones so favourites
+      // can still come back.
+      const picked = byAge.slice(0, keep - 2);
+      const rest = byAge.slice(keep - 2);
+      for (let i = 0; i < 2 && rest.length; i++) {
+        picked.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+      }
+      shortlist.push(...picked);
+    }
+
+    // Short handles instead of UUIDs: an id costs ~14 tokens, a handle costs 2.
+    const handleOf = new Map<string, string>();
+    const idOf = new Map<string, string>();
+    shortlist.forEach((piece, index) => {
+      const handle = `p${index + 1}`;
+      handleOf.set(piece.id, handle);
+      idOf.set(handle, piece.id);
+    });
+
+    const catalog = shortlist
       .map(
         (c) =>
-          `- id:${c.id} | ${c.name ? `nom:"${c.name}" | ` : ''}catégorie:${c.category ?? '?'} | couleur:${
-            colorFr(c.dominant_color) ?? '?'
-          } | fiche détaillée:${brief(c.style_tags) || '-'} | portée:${wornText(c.id)}`
+          `- ${handleOf.get(c.id)} | ${c.category ?? '?'} | ${colorFr(c.dominant_color) ?? '?'}${
+            c.name ? ` | "${c.name}"` : ''
+          } | ${brief(c.style_tags) || '-'} | portée:${wornText(c.id)}`
       )
       .join('\n');
 
@@ -217,10 +264,11 @@ Deno.serve(async (req) => {
       : `Météo du jour : ${weatherLine}.\n\nCompose ${Math.min(Number(count) || 3, 7)} tenues cohérentes et adaptées à la météo.`;
 
     const outputShape = isWeek
-      ? '{"outfits":[{"planned_for":"YYYY-MM-DD","clothes_ids":["id1","id2"],"rationale":"justification courte"}]}'
-      : '{"outfits":[{"clothes_ids":["id1","id2"],"rationale":"courte explication en français"}]}';
+      ? '{"outfits":[{"planned_for":"YYYY-MM-DD","clothes_ids":["p1","p2"],"rationale":"justification courte"}]}'
+      : '{"outfits":[{"clothes_ids":["p1","p2"],"rationale":"courte explication en français"}]}';
 
-    const prompt = `Tu es un styliste. Voici la garde-robe d'un utilisateur :
+    const prompt = `Tu es un styliste. Garde-robe de l'utilisateur, une pièce par ligne
+(identifiant | catégorie | couleur | nom | fiche détaillée | dernier port) :
 ${catalog}
 ${occasionLine}
 ${taste}
@@ -240,7 +288,7 @@ ajoute quand même UNE couche qui s'enlève (veste de préférence, sinon pull),
 si l'après-midi est chaud, et dis clairement dans la justification qu'elle est
 pour le matin et qu'on peut la retirer l'après-midi. Une
 casquette, montre, sac ou ceinture peut compléter le look, sans être obligatoire.
-N'utilise QUE les id fournis ci-dessus, jamais deux fois le même id.
+N'utilise QUE les identifiants courts fournis ci-dessus (p1, p2, ...), jamais deux fois le même.
 La fiche détaillée prime sur la couleur automatique : « couleurs:jaune + anthracite »
 signifie que les DEUX couleurs sont visibles, pas seulement l'anthracite. Tiens compte
 de la matière, de la coupe, du motif, du niveau de formalité et des détails fournis
@@ -325,7 +373,9 @@ ${outputShape}`;
       // Keep only outfits whose ids all exist in the wardrobe.
       .map((o) => ({
         planned_for: isWeek && requestedDates.has(o.planned_for ?? '') ? o.planned_for! : null,
-        clothes_ids: (o.clothes_ids ?? []).filter((id) => byCategory.has(id)),
+        clothes_ids: (o.clothes_ids ?? [])
+          .map((id) => idOf.get(id) ?? id)
+          .filter((id) => byCategory.has(id)),
         rationale: o.rationale ?? '',
       }))
       .filter((o) => {
