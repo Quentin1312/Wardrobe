@@ -1,12 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { StudioBadge } from '@/components/StudioBadge';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { fonts } from '@/constants/theme';
+import { TabBar } from '@/components/TabBar';
 import { useTheme } from '@/context/ThemeContext';
 import { useLocale } from '@/context/LocaleContext';
 
@@ -38,68 +36,14 @@ export default function TabsLayout() {
       void AsyncStorage.setItem(LAST_TAB_KEY, currentTab).catch(() => {});
     }
   }, [currentTab]);
-  const { colors, dark } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <View style={{ flex: 1 }}>
       <Tabs
       sceneContainerStyle={{ backgroundColor: colors.bg }}
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: dark ? colors.energy : colors.text,
-        tabBarInactiveTintColor: colors.chromeMuted,
-        tabBarHideOnKeyboard: true,
-        // Five tabs on a wide-ish viewport made react-navigation put the label
-        // beside the icon, where they landed on top of each other.
-        tabBarLabelPosition: 'below-icon',
-        tabBarLabelStyle: { fontFamily: fonts.sansSemi, fontSize: 10, marginTop: 0, marginBottom: 0 },
-        tabBarIconStyle: { marginTop: 0 },
-        tabBarItemStyle: {
-          flexDirection: 'column',
-          paddingTop: 7,
-          paddingBottom: 7,
-          justifyContent: 'center',
-        },
-        // Floating "bubble" bar, lifted off the bottom edge.
-        tabBarStyle: {
-          position: 'absolute',
-          left: 18,
-          right: 18,
-          bottom: insets.bottom > 0 ? insets.bottom : 14,
-          height: 62,
-          borderRadius: 31,
-          borderTopWidth: 0,
-          backgroundColor: 'transparent',
-          overflow: 'hidden',
-          elevation: 16,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: dark ? 0.55 : 0.18,
-          shadowRadius: 22,
-        },
-        tabBarBackground: () => (
-          <View style={StyleSheet.absoluteFill}>
-            <BlurView
-              intensity={dark ? 55 : 70}
-              tint={dark ? 'dark' : 'light'}
-              style={StyleSheet.absoluteFill}
-            />
-            {/* Glass tint + hairline edge */}
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  backgroundColor: dark ? 'rgba(28,28,31,0.55)' : 'rgba(255,255,255,0.55)',
-                  borderRadius: 31,
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: dark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.08)',
-                },
-              ]}
-            />
-          </View>
-        ),
-      }}
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true }}
     >
       <Tabs.Screen
         name="index"
