@@ -73,6 +73,11 @@ await copyFile(sourceFallbackPath, fallbackPath);
 // same tags, or iOS opens it in Safari with the address bar.
 await writeFile(fallbackPath, withPwaTags(await readFile(fallbackPath, 'utf8')));
 
+// Without this file GitHub Pages runs Jekyll, which refuses to serve any
+// directory whose name starts with an underscore: no _expo/, no bundle,
+// white page.
+await writeFile(resolve(root, 'dist', '.nojekyll'), '');
+
 await writeFile(resolve(root, 'dist', 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`);
 
 for (const icon of ['wardrobe-apple-touch-icon-v2.png', 'wardrobe-icon-v2.png']) {
