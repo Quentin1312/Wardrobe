@@ -25,7 +25,10 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         position: 'absolute',
         left: 18,
         right: 18,
-        bottom: insets.bottom > 0 ? insets.bottom : 14,
+        // Sitting on the full home-indicator inset left a visible strip of
+        // background under the bar; this keeps just enough room for the
+        // indicator not to cross the labels.
+        bottom: insets.bottom > 0 ? Math.max(insets.bottom - 18, 10) : 14,
         height: BAR_HEIGHT,
         borderRadius: BAR_HEIGHT / 2,
         overflow: 'hidden',
