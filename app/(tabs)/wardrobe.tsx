@@ -173,11 +173,32 @@ export default function Wardrobe() {
           <ActivityIndicator color={colors.accent} />
         </View>
       ) : items.length === 0 ? (
-        <EmptyState
-          icon="shirt-outline"
-          title={t('wardrobe.emptyTitle')}
-          subtitle={t('wardrobe.emptyBody')}
-        />
+        // An empty wardrobe used to hide the header, and with it the only way
+        // to add a first piece.
+        <View style={{ flex: 1, justifyContent: 'center', gap: spacing.lg, padding: spacing.screen }}>
+          <EmptyState
+            icon="shirt-outline"
+            title={t('wardrobe.emptyTitle')}
+            subtitle={t('wardrobe.emptyBody')}
+          />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/add-item')}
+            style={({ pressed }) => ({
+              alignSelf: 'center',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.sm,
+              minHeight: 56,
+              paddingHorizontal: spacing.lg,
+              borderRadius: radius.full,
+              backgroundColor: pressed ? colors.accentSoft : colors.energy,
+            })}
+          >
+            <Ionicons name="add" size={24} color={colors.energyText} />
+            <Text style={[typography.button, { color: colors.energyText }]}>{t('add.title')}</Text>
+          </Pressable>
+        </View>
       ) : (
         <FlatList
           data={shown}

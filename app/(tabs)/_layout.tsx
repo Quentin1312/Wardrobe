@@ -50,10 +50,17 @@ export default function TabsLayout() {
         tabBarActiveTintColor: dark ? colors.energy : colors.text,
         tabBarInactiveTintColor: colors.chromeMuted,
         tabBarHideOnKeyboard: true,
-        // Symmetric padding keeps icon + label optically centred in the bubble.
+        // Five tabs on a wide-ish viewport made react-navigation put the label
+        // beside the icon, where they landed on top of each other.
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: { fontFamily: fonts.sansSemi, fontSize: 10, marginTop: 0, marginBottom: 0 },
         tabBarIconStyle: { marginTop: 0 },
-        tabBarItemStyle: { paddingTop: 8, paddingBottom: 8, justifyContent: 'center' },
+        tabBarItemStyle: {
+          flexDirection: 'column',
+          paddingTop: 7,
+          paddingBottom: 7,
+          justifyContent: 'center',
+        },
         // Floating "bubble" bar, lifted off the bottom edge.
         tabBarStyle: {
           position: 'absolute',
